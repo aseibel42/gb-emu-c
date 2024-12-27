@@ -51,9 +51,9 @@ void cpu_set_flag_h(bool);
 void cpu_set_flag_c(bool);
 
 static inline u16 read_r16(u16* ptr) {
-    return reverse(*ptr);
+    return *ptr;
 }
 
 static inline void set_r16(u16* ptr, u16 value) {
-    *(ptr) = reverse(value);
+    *ptr = value;
 }
