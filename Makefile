@@ -19,7 +19,7 @@ SRCEXT := .c
 OBJEXT := .o
 
 # Target binary program
-EXE := emu.exe
+EXE := emu
 
 # Flags, libraries, and includes
 CFLAGS := -Wall -Wextra -std=c11
