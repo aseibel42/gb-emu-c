@@ -1,6 +1,6 @@
-#include "bus.h"
 #include "cpu.h"
 #include "instruction.h"
+#include "mem.h"
 
 struct cpu_registers cpu_registers = {};
 struct cpu_state cpu_state = {};
@@ -25,7 +25,7 @@ void cpu_init() {
 
 bool cpu_step() {
     // fetch instruction
-    u8 opcode = bus_read(cpu_registers.pc++);
+    u8 opcode = mem_read(cpu_registers.pc++);
     instruction instr = instructions[opcode];
 
     // fetch data

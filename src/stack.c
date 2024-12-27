@@ -1,13 +1,13 @@
-#include "bus.h"
 #include "cpu.h"
+#include "mem.h"
 #include "stack.h"
 
 void stack_push(u8 data) {
-    bus_write(cpu_registers.sp--, data);
+    mem_write(cpu_registers.sp--, data);
 }
 
 u8 stack_pop() {
-    return bus_read(cpu_registers.sp++);
+    return mem_read(cpu_registers.sp++);
 }
 
 void stack_push16(u16 data) {
