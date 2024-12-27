@@ -1,0 +1,17 @@
+# Compiled object files
+*.o
+*.a
+*.so
+
+# Executable files
+*.exe
+
+# Build directories
+bin/
+obj/
+
+# Platform-dependent
+lib/
+
+# IDE-specific files
+.vscode/
