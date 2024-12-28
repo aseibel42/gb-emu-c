@@ -37,66 +37,25 @@ bool cpu_step() {
     return false;
 }
 
-u16 cpu_read_reg_af() {
-    return read_r16((u16*)&cpu_registers.a);
-}
-
-u16 cpu_read_reg_bc() {
-    return read_r16((u16*)&cpu_registers.b);
-}
-
-u16 cpu_read_reg_de() {
-    return read_r16((u16*)&cpu_registers.d);
-}
-
-u16 cpu_read_reg_hl() {
-    return read_r16((u16*)&cpu_registers.h);
-}
-
-void cpu_set_reg_af(u16 value) {
-    set_r16((u16*)&cpu_registers.a, value);
-}
-
-void cpu_set_reg_bc(u16 value) {
-    set_r16((u16*)&cpu_registers.b, value);
-}
-
-void cpu_set_reg_de(u16 value) {
-    set_r16((u16*)&cpu_registers.d, value);
-}
-
-void cpu_set_reg_hl(u16 value) {
-    set_r16((u16*)&cpu_registers.h, value);
-}
-
-bool cpu_read_flag_z(){
+bool flag_z() {
     return bit_read(cpu_registers.f, 7);
 }
 
-bool cpu_read_flag_n(){
+bool flag_n() {
     return bit_read(cpu_registers.f, 6);
 }
 
-bool cpu_read_flag_h(){
+bool flag_h() {
     return bit_read(cpu_registers.f, 5);
 }
 
-bool cpu_read_flag_c(){
+bool flag_c() {
     return bit_read(cpu_registers.f, 4);
 }
 
-void cpu_set_flag_z(bool flag) {
-    cpu_registers.f = bit_assign(cpu_registers.f, 7, flag);
-}
-
-void cpu_set_flag_n(bool flag) {
-    cpu_registers.f = bit_assign(cpu_registers.f, 6, flag);
-}
-
-void cpu_set_flag_h(bool flag) {
-    cpu_registers.f = bit_assign(cpu_registers.f, 5, flag);
-}
-
-void cpu_set_flag_c(bool flag) {
-    cpu_registers.f = bit_assign(cpu_registers.f, 4, flag);
+void set_flags(i8 z, i8 n, i8 h, i8 c) {
+    if (z != -1) bit_assign(cpu_registers.f, 7, z);
+    if (n != -1) bit_assign(cpu_registers.f, 6, n);
+    if (h != -1) bit_assign(cpu_registers.f, 5, h);
+    if (c != -1) bit_assign(cpu_registers.f, 4, c);
 }

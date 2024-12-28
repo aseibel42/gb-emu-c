@@ -2,17 +2,15 @@
 
 #include "util.h"
 
+#define REG(a, f) union { struct { u8 a; u8 f; }; u16 a##f; };
+
 struct cpu_registers {
-    u8 a;
-    u8 f;
-    u8 b;
-    u8 c;
-    u8 d;
-    u8 e;
-    u8 h;
-    u8 l;
     u16 pc;
     u16 sp;
+    REG(a, f);
+    REG(b, c);
+    REG(d, e);
+    REG(h, l);
 };
 
 struct cpu_state {
@@ -30,30 +28,14 @@ extern struct cpu_state cpu_state;
 void cpu_init();
 bool cpu_step();
 
-u16 cpu_read_reg_af();
-u16 cpu_read_reg_bc();
-u16 cpu_read_reg_de();
-u16 cpu_read_reg_hl();
+bool flag_z();
+bool flag_n();
+bool flag_h();
+bool flag_c();
 
-void cpu_set_reg_af(u16);
-void cpu_set_reg_bc(u16);
-void cpu_set_reg_de(u16);
-void cpu_set_reg_hl(u16);
-
-bool cpu_read_flag_z();
-bool cpu_read_flag_n();
-bool cpu_read_flag_h();
-bool cpu_read_flag_c();
+void set_flags(i8 z, i8 n, i8 h, i8 c);
 
 void cpu_set_flag_z(bool);
 void cpu_set_flag_n(bool);
 void cpu_set_flag_h(bool);
 void cpu_set_flag_c(bool);
-
-static inline u16 read_r16(u16* ptr) {
-    return *ptr;
-}
-
-static inline void set_r16(u16* ptr, u16 value) {
-    *ptr = value;
-}
