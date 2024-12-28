@@ -25,12 +25,22 @@ void cpu_init() {
 
 bool cpu_step() {
     // fetch instruction
-    u8 opcode = mem_read(cpu_reg.pc++);
+    u8 opcode = fetch();
 
     // execute instruction
     op[opcode]();
 
     return false;
+}
+
+u8 fetch() {
+    return mem_read(cpu_reg.pc++);
+}
+
+u16 fetch16() {
+    u16 lo = fetch();
+    u16 hi = fetch();
+    return u16_from_bytes((u16_bytes){ hi, lo });
 }
 
 bool flag_z() {

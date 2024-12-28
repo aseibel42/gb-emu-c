@@ -28,14 +28,12 @@ extern struct cpu_state cpu_state;
 void cpu_init();
 bool cpu_step();
 
+u8 fetch();
+u16 fetch16();
+
 bool flag_z();
 bool flag_n();
 bool flag_h();
 bool flag_c();
 
 void set_flags(i8 z, i8 n, i8 h, i8 c);
-
-void cpu_set_flag_z(bool);
-void cpu_set_flag_n(bool);
-void cpu_set_flag_h(bool);
-void cpu_set_flag_c(bool);
