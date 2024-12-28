@@ -15,113 +15,121 @@ u16 read_n16() {
     return nn;
 }
 
-void nop() {}
-void halt() {}
+/*
+ * Machine control instructions
+*/
 
-void ld_ab() { cpu_reg.a = cpu_reg.b; }
-void ld_ac() { cpu_reg.a = cpu_reg.c; }
-void ld_ad() { cpu_reg.a = cpu_reg.d; }
-void ld_ae() { cpu_reg.a = cpu_reg.e; }
-void ld_ah() { cpu_reg.a = cpu_reg.h; }
-void ld_al() { cpu_reg.a = cpu_reg.l; }
-void ld_aa() { cpu_reg.a = cpu_reg.a; }
-void ld_ax() { cpu_reg.a = mem_read(cpu_reg.hl); }
-void ld_an() { cpu_reg.a = read_n8(); }
+void nop() {}  // 0x00
+void halt() {}  // 0x76
 
-void ld_bb() { cpu_reg.b = cpu_reg.b; }
-void ld_bc() { cpu_reg.b = cpu_reg.c; }
-void ld_bd() { cpu_reg.b = cpu_reg.d; }
-void ld_be() { cpu_reg.b = cpu_reg.e; }
-void ld_bh() { cpu_reg.b = cpu_reg.h; }
-void ld_bl() { cpu_reg.b = cpu_reg.l; }
-void ld_ba() { cpu_reg.b = cpu_reg.a; }
-void ld_bx() { cpu_reg.b = mem_read(cpu_reg.hl); }
-void ld_bn() { cpu_reg.b = read_n8(); }
+/*
+ * Load instructions
+ */
 
-void ld_cb() { cpu_reg.c = cpu_reg.b; }
-void ld_cc() { cpu_reg.c = cpu_reg.c; }
-void ld_cd() { cpu_reg.c = cpu_reg.d; }
-void ld_ce() { cpu_reg.c = cpu_reg.e; }
-void ld_ch() { cpu_reg.c = cpu_reg.h; }
-void ld_cl() { cpu_reg.c = cpu_reg.l; }
-void ld_ca() { cpu_reg.c = cpu_reg.a; }
-void ld_cx() { cpu_reg.c = mem_read(cpu_reg.hl); }
-void ld_cn() { cpu_reg.c = read_n8(); }
+void ld_ab() { cpu_reg.a = cpu_reg.b; }  // 0x78
+void ld_ac() { cpu_reg.a = cpu_reg.c; }  // 0x79
+void ld_ad() { cpu_reg.a = cpu_reg.d; }  // 0x7A
+void ld_ae() { cpu_reg.a = cpu_reg.e; }  // 0x7B
+void ld_ah() { cpu_reg.a = cpu_reg.h; }  // 0x7C
+void ld_al() { cpu_reg.a = cpu_reg.l; }  // 0x7D
+void ld_aa() { cpu_reg.a = cpu_reg.a; }  // 0x7F
+void ld_ax() { cpu_reg.a = mem_read(cpu_reg.hl); }  // 0x7E
+void ld_an() { cpu_reg.a = read_n8(); }  // 0x3E
 
-void ld_db() { cpu_reg.d = cpu_reg.b; }
-void ld_dc() { cpu_reg.d = cpu_reg.c; }
-void ld_dd() { cpu_reg.d = cpu_reg.d; }
-void ld_de() { cpu_reg.d = cpu_reg.e; }
-void ld_dh() { cpu_reg.d = cpu_reg.h; }
-void ld_dl() { cpu_reg.d = cpu_reg.l; }
-void ld_da() { cpu_reg.d = cpu_reg.a; }
-void ld_dx() { cpu_reg.d = mem_read(cpu_reg.hl); }
-void ld_dn() { cpu_reg.d = read_n8(); }
+void ld_bb() { cpu_reg.b = cpu_reg.b; }  // 0x40
+void ld_bc() { cpu_reg.b = cpu_reg.c; }  // 0x41
+void ld_bd() { cpu_reg.b = cpu_reg.d; }  // 0x42
+void ld_be() { cpu_reg.b = cpu_reg.e; }  // 0x43
+void ld_bh() { cpu_reg.b = cpu_reg.h; }  // 0x44
+void ld_bl() { cpu_reg.b = cpu_reg.l; }  // 0x45
+void ld_ba() { cpu_reg.b = cpu_reg.a; }  // 0x47
+void ld_bx() { cpu_reg.b = mem_read(cpu_reg.hl); }  // 0x46
+void ld_bn() { cpu_reg.b = read_n8(); }  // 0x06
 
-void ld_eb() { cpu_reg.e = cpu_reg.b; }
-void ld_ec() { cpu_reg.e = cpu_reg.c; }
-void ld_ed() { cpu_reg.e = cpu_reg.d; }
-void ld_ee() { cpu_reg.e = cpu_reg.e; }
-void ld_eh() { cpu_reg.e = cpu_reg.h; }
-void ld_el() { cpu_reg.e = cpu_reg.l; }
-void ld_ea() { cpu_reg.e = cpu_reg.a; }
-void ld_ex() { cpu_reg.e = mem_read(cpu_reg.hl); }
-void ld_en() { cpu_reg.e = read_n8(); }
+void ld_cb() { cpu_reg.c = cpu_reg.b; }  // 0x48
+void ld_cc() { cpu_reg.c = cpu_reg.c; }  // 0x49
+void ld_cd() { cpu_reg.c = cpu_reg.d; }  // 0x4A
+void ld_ce() { cpu_reg.c = cpu_reg.e; }  // 0x4B
+void ld_ch() { cpu_reg.c = cpu_reg.h; }  // 0x4C
+void ld_cl() { cpu_reg.c = cpu_reg.l; }  // 0x4D
+void ld_ca() { cpu_reg.c = cpu_reg.a; }  // 0x4F
+void ld_cx() { cpu_reg.c = mem_read(cpu_reg.hl); }  // 0x4E
+void ld_cn() { cpu_reg.c = read_n8(); }  // 0x0E
 
-void ld_hb() { cpu_reg.h = cpu_reg.b; }
-void ld_hc() { cpu_reg.h = cpu_reg.c; }
-void ld_hd() { cpu_reg.h = cpu_reg.d; }
-void ld_he() { cpu_reg.h = cpu_reg.e; }
-void ld_hh() { cpu_reg.h = cpu_reg.h; }
-void ld_hl() { cpu_reg.h = cpu_reg.l; }
-void ld_ha() { cpu_reg.h = cpu_reg.a; }
-void ld_hx() { cpu_reg.h = mem_read(cpu_reg.hl); }
-void ld_hn() { cpu_reg.h = read_n8(); }
+void ld_db() { cpu_reg.d = cpu_reg.b; }  // 0x50
+void ld_dc() { cpu_reg.d = cpu_reg.c; }  // 0x51
+void ld_dd() { cpu_reg.d = cpu_reg.d; }  // 0x52
+void ld_de() { cpu_reg.d = cpu_reg.e; }  // 0x53
+void ld_dh() { cpu_reg.d = cpu_reg.h; }  // 0x54
+void ld_dl() { cpu_reg.d = cpu_reg.l; }  // 0x55
+void ld_da() { cpu_reg.d = cpu_reg.a; }  // 0x57
+void ld_dx() { cpu_reg.d = mem_read(cpu_reg.hl); }  // 0x56
+void ld_dn() { cpu_reg.d = read_n8(); }  // 0x16
 
-void ld_lb() { cpu_reg.l = cpu_reg.b; }
-void ld_lc() { cpu_reg.l = cpu_reg.c; }
-void ld_ld() { cpu_reg.l = cpu_reg.d; }
-void ld_le() { cpu_reg.l = cpu_reg.e; }
-void ld_lh() { cpu_reg.l = cpu_reg.h; }
-void ld_ll() { cpu_reg.l = cpu_reg.l; }
-void ld_la() { cpu_reg.l = cpu_reg.a; }
-void ld_lx() { cpu_reg.l = mem_read(cpu_reg.hl); }
-void ld_ln() { cpu_reg.l = read_n8(); }
+void ld_eb() { cpu_reg.e = cpu_reg.b; }  // 0x58
+void ld_ec() { cpu_reg.e = cpu_reg.c; }  // 0x59
+void ld_ed() { cpu_reg.e = cpu_reg.d; }  // 0x5A
+void ld_ee() { cpu_reg.e = cpu_reg.e; }  // 0x5B
+void ld_eh() { cpu_reg.e = cpu_reg.h; }  // 0x5C
+void ld_el() { cpu_reg.e = cpu_reg.l; }  // 0x5D
+void ld_ea() { cpu_reg.e = cpu_reg.a; }  // 0x5F
+void ld_ex() { cpu_reg.e = mem_read(cpu_reg.hl); }  // 0x5E
+void ld_en() { cpu_reg.e = read_n8(); }  // 0x1E
 
-void ld_xb() { mem_write(cpu_reg.hl, cpu_reg.b); }
-void ld_xc() { mem_write(cpu_reg.hl, cpu_reg.c); }
-void ld_xd() { mem_write(cpu_reg.hl, cpu_reg.d); }
-void ld_xe() { mem_write(cpu_reg.hl, cpu_reg.e); }
-void ld_xh() { mem_write(cpu_reg.hl, cpu_reg.h); }
-void ld_xl() { mem_write(cpu_reg.hl, cpu_reg.l); }
-void ld_xa() { mem_write(cpu_reg.hl, cpu_reg.a); }
-void ld_xn() { mem_write(cpu_reg.hl, read_n8()); }
+void ld_hb() { cpu_reg.h = cpu_reg.b; }  // 0x60
+void ld_hc() { cpu_reg.h = cpu_reg.c; }  // 0x61
+void ld_hd() { cpu_reg.h = cpu_reg.d; }  // 0x62
+void ld_he() { cpu_reg.h = cpu_reg.e; }  // 0x63
+void ld_hh() { cpu_reg.h = cpu_reg.h; }  // 0x64
+void ld_hl() { cpu_reg.h = cpu_reg.l; }  // 0x65
+void ld_ha() { cpu_reg.h = cpu_reg.a; }  // 0x67
+void ld_hx() { cpu_reg.h = mem_read(cpu_reg.hl); }  // 0x66
+void ld_hn() { cpu_reg.h = read_n8(); }  // 0x26
 
-void ld_a_bc() { cpu_reg.a = mem_read(cpu_reg.bc); }
-void ld_a_de() { cpu_reg.a = mem_read(cpu_reg.de); }
+void ld_lb() { cpu_reg.l = cpu_reg.b; }  // 0x68
+void ld_lc() { cpu_reg.l = cpu_reg.c; }  // 0x69
+void ld_ld() { cpu_reg.l = cpu_reg.d; }  // 0x6A
+void ld_le() { cpu_reg.l = cpu_reg.e; }  // 0x6B
+void ld_lh() { cpu_reg.l = cpu_reg.h; }  // 0x6C
+void ld_ll() { cpu_reg.l = cpu_reg.l; }  // 0x6D
+void ld_la() { cpu_reg.l = cpu_reg.a; }  // 0x6F
+void ld_lx() { cpu_reg.l = mem_read(cpu_reg.hl); }  // 0x6E
+void ld_ln() { cpu_reg.l = read_n8(); }  // 0x2E
 
-void ld_bc_a() { mem_write(cpu_reg.bc, cpu_reg.a); }
-void ld_de_a() { mem_write(cpu_reg.de, cpu_reg.a); }
+void ld_xb() { mem_write(cpu_reg.hl, cpu_reg.b); }  // 0x70
+void ld_xc() { mem_write(cpu_reg.hl, cpu_reg.c); }  // 0x71
+void ld_xd() { mem_write(cpu_reg.hl, cpu_reg.d); }  // 0x72
+void ld_xe() { mem_write(cpu_reg.hl, cpu_reg.e); }  // 0x73
+void ld_xh() { mem_write(cpu_reg.hl, cpu_reg.h); }  // 0x74
+void ld_xl() { mem_write(cpu_reg.hl, cpu_reg.l); }  // 0x75
+void ld_xa() { mem_write(cpu_reg.hl, cpu_reg.a); }  // 0x77
+void ld_xn() { mem_write(cpu_reg.hl, read_n8()); }  // 0x36
 
-void ld_nn_a() { mem_write(read_n16(), cpu_reg.a); }
-void ld_a_nn() { cpu_reg.a = mem_read(read_n16()); }
+void ld_a_bc() { cpu_reg.a = mem_read(cpu_reg.bc); }  // 0x0A
+void ld_a_de() { cpu_reg.a = mem_read(cpu_reg.de); }  // 0x1A
 
-void ld_bc_nn() { cpu_reg.bc = read_n16(); }
-void ld_de_nn() { cpu_reg.de = read_n16(); }
-void ld_hl_nn() { cpu_reg.hl = read_n16(); }
-void ld_sp_nn() { cpu_reg.sp = read_n16(); }
+void ld_bc_a() { mem_write(cpu_reg.bc, cpu_reg.a); }  // 0x02
+void ld_de_a() { mem_write(cpu_reg.de, cpu_reg.a); }  // 0x12
 
-void ldio_c_a() { cpu_reg.a = mem_read(0xFF00 + cpu_reg.c); }
-void ldio_a_c() { mem_write(0xFF00 + cpu_reg.c, cpu_reg.a); }
-void ldio_n_a() { cpu_reg.a = mem_read(0xFF00 + read_n8()); }
-void ldio_a_n() { mem_write(0xFF00 + read_n8(), cpu_reg.a); }
+void ld_nn_a() { mem_write(read_n16(), cpu_reg.a); }  // 0xEA
+void ld_a_nn() { cpu_reg.a = mem_read(read_n16()); }  // 0xFA
 
-void ldd_ax() { cpu_reg.a = mem_read(cpu_reg.hl--); }
-void ldd_xa() { mem_write(cpu_reg.hl--, cpu_reg.a); }
-void ldi_ax() { cpu_reg.a = mem_read(cpu_reg.hl++); }
-void ldi_xa() { mem_write(cpu_reg.hl++, cpu_reg.a); }
+void ld_bc_nn() { cpu_reg.bc = read_n16(); }  // 0x01
+void ld_de_nn() { cpu_reg.de = read_n16(); }  // 0x11
+void ld_hl_nn() { cpu_reg.hl = read_n16(); }  // 0x21
+void ld_sp_nn() { cpu_reg.sp = read_n16(); }  // 0x31
 
-void ld_sp_hl() { cpu_reg.sp = cpu_reg.hl; }
+void ldio_c_a() { cpu_reg.a = mem_read(0xFF00 + cpu_reg.c); }  // 0xE2
+void ldio_a_c() { mem_write(0xFF00 + cpu_reg.c, cpu_reg.a); }  // 0xF2
+void ldio_n_a() { cpu_reg.a = mem_read(0xFF00 + read_n8()); }  // 0xE0
+void ldio_a_n() { mem_write(0xFF00 + read_n8(), cpu_reg.a); }  // 0xF0
+
+void ldd_ax() { cpu_reg.a = mem_read(cpu_reg.hl--); }  // 0x3A
+void ldd_xa() { mem_write(cpu_reg.hl--, cpu_reg.a); }  // 0x32
+void ldi_ax() { cpu_reg.a = mem_read(cpu_reg.hl++); }  // 0x2A
+void ldi_xa() { mem_write(cpu_reg.hl++, cpu_reg.a); }  // 0x22
+
+void ld_sp_hl() { cpu_reg.sp = cpu_reg.hl; }  // 0xF9
 
 void ld_hl_sp_n() {
     u8 x = read_n8();
@@ -131,19 +139,23 @@ void ld_hl_sp_n() {
     bool h = (cpu_reg.sp & 0xF) + (x & 0xF) > 0xF;
     bool c = (cpu_reg.sp & 0xFF) + (x & 0xFF) > 0xFF;
     set_flags(z, n, h, c);
-}
+}  // 0xF8
 
-void ld_nn_sp() { mem_write16(read_n16(), cpu_reg.sp); }
+void ld_nn_sp() { mem_write16(read_n16(), cpu_reg.sp); }  // 0x08
 
-void push_af() { stack_push16(cpu_reg.af); }
-void push_bc() { stack_push16(cpu_reg.bc); }
-void push_de() { stack_push16(cpu_reg.de); }
-void push_hl() { stack_push16(cpu_reg.hl); }
+void push_af() { stack_push16(cpu_reg.af); }  // 0xF5
+void push_bc() { stack_push16(cpu_reg.bc); }  // 0xC5
+void push_de() { stack_push16(cpu_reg.de); }  // 0xD5
+void push_hl() { stack_push16(cpu_reg.hl); }  // 0xE5
 
-void pop_af() { cpu_reg.af = stack_pop16() & 0x0FFF; }
-void pop_bc() { cpu_reg.bc = stack_pop16(); }
-void pop_de() { cpu_reg.de = stack_pop16(); }
-void pop_hl() { cpu_reg.hl = stack_pop16(); }
+void pop_af() { cpu_reg.af = stack_pop16() & 0x0FFF; }  // 0xF1
+void pop_bc() { cpu_reg.bc = stack_pop16(); }  // 0xC1
+void pop_de() { cpu_reg.de = stack_pop16(); }  // 0xD1
+void pop_hl() { cpu_reg.hl = stack_pop16(); }  // 0xE1
+
+/*
+ * Arithmetic instructions
+ */
 
 u8 _add(u8 a, u8 b) {
     u16 result = a + b;
@@ -155,15 +167,15 @@ u8 _add(u8 a, u8 b) {
     return result;
 }
 
-void add_ab() { cpu_reg.a = _add(cpu_reg.a, cpu_reg.b); }
-void add_ac() { cpu_reg.a = _add(cpu_reg.a, cpu_reg.c); }
-void add_ad() { cpu_reg.a = _add(cpu_reg.a, cpu_reg.d); }
-void add_ae() { cpu_reg.a = _add(cpu_reg.a, cpu_reg.e); }
-void add_ah() { cpu_reg.a = _add(cpu_reg.a, cpu_reg.h); }
-void add_al() { cpu_reg.a = _add(cpu_reg.a, cpu_reg.l); }
-void add_aa() { cpu_reg.a = _add(cpu_reg.a, cpu_reg.a); }
-void add_ax() { cpu_reg.a = _add(cpu_reg.a, mem_read(cpu_reg.hl)); }
-void add_an() { cpu_reg.a = _add(cpu_reg.a, read_n8()); }
+void add_ab() { cpu_reg.a = _add(cpu_reg.a, cpu_reg.b); }  // 0x80
+void add_ac() { cpu_reg.a = _add(cpu_reg.a, cpu_reg.c); }  // 0x81
+void add_ad() { cpu_reg.a = _add(cpu_reg.a, cpu_reg.d); }  // 0x82
+void add_ae() { cpu_reg.a = _add(cpu_reg.a, cpu_reg.e); }  // 0x83
+void add_ah() { cpu_reg.a = _add(cpu_reg.a, cpu_reg.h); }  // 0x84
+void add_al() { cpu_reg.a = _add(cpu_reg.a, cpu_reg.l); }  // 0x85
+void add_aa() { cpu_reg.a = _add(cpu_reg.a, cpu_reg.a); }  // 0x87
+void add_ax() { cpu_reg.a = _add(cpu_reg.a, mem_read(cpu_reg.hl)); }  // 0x86
+void add_an() { cpu_reg.a = _add(cpu_reg.a, read_n8()); }  // 0xC6
 
 u8 _adc(u8 a, u8 b) {
     u16 result = a + b + flag_c();
@@ -175,15 +187,15 @@ u8 _adc(u8 a, u8 b) {
     return result;
 }
 
-void adc_ab() { cpu_reg.a = _adc(cpu_reg.a, cpu_reg.b); }
-void adc_ac() { cpu_reg.a = _adc(cpu_reg.a, cpu_reg.c); }
-void adc_ad() { cpu_reg.a = _adc(cpu_reg.a, cpu_reg.d); }
-void adc_ae() { cpu_reg.a = _adc(cpu_reg.a, cpu_reg.e); }
-void adc_ah() { cpu_reg.a = _adc(cpu_reg.a, cpu_reg.h); }
-void adc_al() { cpu_reg.a = _adc(cpu_reg.a, cpu_reg.l); }
-void adc_aa() { cpu_reg.a = _adc(cpu_reg.a, cpu_reg.a); }
-void adc_ax() { cpu_reg.a = _adc(cpu_reg.a, mem_read(cpu_reg.hl)); }
-void adc_an() { cpu_reg.a = _adc(cpu_reg.a, read_n8()); }
+void adc_ab() { cpu_reg.a = _adc(cpu_reg.a, cpu_reg.b); }  // 0x88
+void adc_ac() { cpu_reg.a = _adc(cpu_reg.a, cpu_reg.c); }  // 0x89
+void adc_ad() { cpu_reg.a = _adc(cpu_reg.a, cpu_reg.d); }  // 0x8A
+void adc_ae() { cpu_reg.a = _adc(cpu_reg.a, cpu_reg.e); }  // 0x8B
+void adc_ah() { cpu_reg.a = _adc(cpu_reg.a, cpu_reg.h); }  // 0x8C
+void adc_al() { cpu_reg.a = _adc(cpu_reg.a, cpu_reg.l); }  // 0x8D
+void adc_aa() { cpu_reg.a = _adc(cpu_reg.a, cpu_reg.a); }  // 0x8F
+void adc_ax() { cpu_reg.a = _adc(cpu_reg.a, mem_read(cpu_reg.hl)); }  // 0x8E
+void adc_an() { cpu_reg.a = _adc(cpu_reg.a, read_n8()); }  // 0xCE
 
 u8 _sub(i8 a, i8 b) {
     i8 result = a - b;
@@ -195,15 +207,15 @@ u8 _sub(i8 a, i8 b) {
     return result;
 }
 
-void sub_ab() { cpu_reg.a = _sub(cpu_reg.a, cpu_reg.b); }
-void sub_ac() { cpu_reg.a = _sub(cpu_reg.a, cpu_reg.c); }
-void sub_ad() { cpu_reg.a = _sub(cpu_reg.a, cpu_reg.d); }
-void sub_ae() { cpu_reg.a = _sub(cpu_reg.a, cpu_reg.e); }
-void sub_ah() { cpu_reg.a = _sub(cpu_reg.a, cpu_reg.h); }
-void sub_al() { cpu_reg.a = _sub(cpu_reg.a, cpu_reg.l); }
-void sub_aa() { cpu_reg.a = _sub(cpu_reg.a, cpu_reg.a); }
-void sub_ax() { cpu_reg.a = _sub(cpu_reg.a, mem_read(cpu_reg.hl)); }
-void sub_an() { cpu_reg.a = _sub(cpu_reg.a, read_n8()); }
+void sub_ab() { cpu_reg.a = _sub(cpu_reg.a, cpu_reg.b); }  // 0x90
+void sub_ac() { cpu_reg.a = _sub(cpu_reg.a, cpu_reg.c); }  // 0x91
+void sub_ad() { cpu_reg.a = _sub(cpu_reg.a, cpu_reg.d); }  // 0x92
+void sub_ae() { cpu_reg.a = _sub(cpu_reg.a, cpu_reg.e); }  // 0x93
+void sub_ah() { cpu_reg.a = _sub(cpu_reg.a, cpu_reg.h); }  // 0x94
+void sub_al() { cpu_reg.a = _sub(cpu_reg.a, cpu_reg.l); }  // 0x95
+void sub_aa() { cpu_reg.a = _sub(cpu_reg.a, cpu_reg.a); }  // 0x97
+void sub_ax() { cpu_reg.a = _sub(cpu_reg.a, mem_read(cpu_reg.hl)); }  // 0x96
+void sub_an() { cpu_reg.a = _sub(cpu_reg.a, read_n8()); }  // 0xD6
 
 u8 _sbc(i8 a, i8 b) {
     i8 result = a - b - flag_c();
@@ -215,15 +227,15 @@ u8 _sbc(i8 a, i8 b) {
     return result;
 }
 
-void sbc_ab() { cpu_reg.a = _sbc(cpu_reg.a, cpu_reg.b); }
-void sbc_ac() { cpu_reg.a = _sbc(cpu_reg.a, cpu_reg.c); }
-void sbc_ad() { cpu_reg.a = _sbc(cpu_reg.a, cpu_reg.d); }
-void sbc_ae() { cpu_reg.a = _sbc(cpu_reg.a, cpu_reg.e); }
-void sbc_ah() { cpu_reg.a = _sbc(cpu_reg.a, cpu_reg.h); }
-void sbc_al() { cpu_reg.a = _sbc(cpu_reg.a, cpu_reg.l); }
-void sbc_aa() { cpu_reg.a = _sbc(cpu_reg.a, cpu_reg.a); }
-void sbc_ax() { cpu_reg.a = _sbc(cpu_reg.a, mem_read(cpu_reg.hl)); }
-void sbc_an() { cpu_reg.a = _sbc(cpu_reg.a, read_n8()); }
+void sbc_ab() { cpu_reg.a = _sbc(cpu_reg.a, cpu_reg.b); }  // 0x98
+void sbc_ac() { cpu_reg.a = _sbc(cpu_reg.a, cpu_reg.c); }  // 0x99
+void sbc_ad() { cpu_reg.a = _sbc(cpu_reg.a, cpu_reg.d); }  // 0x9A
+void sbc_ae() { cpu_reg.a = _sbc(cpu_reg.a, cpu_reg.e); }  // 0x9B
+void sbc_ah() { cpu_reg.a = _sbc(cpu_reg.a, cpu_reg.h); }  // 0x9C
+void sbc_al() { cpu_reg.a = _sbc(cpu_reg.a, cpu_reg.l); }  // 0x9D
+void sbc_aa() { cpu_reg.a = _sbc(cpu_reg.a, cpu_reg.a); }  // 0x9F
+void sbc_ax() { cpu_reg.a = _sbc(cpu_reg.a, mem_read(cpu_reg.hl)); }  // 0x9E
+void sbc_an() { cpu_reg.a = _sbc(cpu_reg.a, read_n8()); }  // 0xDE
 
 u8 _and(u8 a, u8 b) {
     u8 result = a & b;
@@ -235,15 +247,15 @@ u8 _and(u8 a, u8 b) {
     return result;
 }
 
-void and_ab() { cpu_reg.a = _and(cpu_reg.a, cpu_reg.b); }
-void and_ac() { cpu_reg.a = _and(cpu_reg.a, cpu_reg.c); }
-void and_ad() { cpu_reg.a = _and(cpu_reg.a, cpu_reg.d); }
-void and_ae() { cpu_reg.a = _and(cpu_reg.a, cpu_reg.e); }
-void and_ah() { cpu_reg.a = _and(cpu_reg.a, cpu_reg.h); }
-void and_al() { cpu_reg.a = _and(cpu_reg.a, cpu_reg.l); }
-void and_aa() { cpu_reg.a = _and(cpu_reg.a, cpu_reg.a); }
-void and_ax() { cpu_reg.a = _and(cpu_reg.a, mem_read(cpu_reg.hl)); }
-void and_an() { cpu_reg.a = _and(cpu_reg.a, read_n8()); }
+void and_ab() { cpu_reg.a = _and(cpu_reg.a, cpu_reg.b); }  // 0xA0
+void and_ac() { cpu_reg.a = _and(cpu_reg.a, cpu_reg.c); }  // 0xA1
+void and_ad() { cpu_reg.a = _and(cpu_reg.a, cpu_reg.d); }  // 0xA2
+void and_ae() { cpu_reg.a = _and(cpu_reg.a, cpu_reg.e); }  // 0xA3
+void and_ah() { cpu_reg.a = _and(cpu_reg.a, cpu_reg.h); }  // 0xA4
+void and_al() { cpu_reg.a = _and(cpu_reg.a, cpu_reg.l); }  // 0xA5
+void and_aa() { cpu_reg.a = _and(cpu_reg.a, cpu_reg.a); }  // 0xA7
+void and_ax() { cpu_reg.a = _and(cpu_reg.a, mem_read(cpu_reg.hl)); }  // 0xA6
+void and_an() { cpu_reg.a = _and(cpu_reg.a, read_n8()); }  // 0xE6
 
 u8 _xor(u8 a, u8 b) {
     u8 result = a ^ b;
@@ -255,15 +267,15 @@ u8 _xor(u8 a, u8 b) {
     return result;
 }
 
-void xor_ab() { cpu_reg.a = _xor(cpu_reg.a, cpu_reg.b); }
-void xor_ac() { cpu_reg.a = _xor(cpu_reg.a, cpu_reg.c); }
-void xor_ad() { cpu_reg.a = _xor(cpu_reg.a, cpu_reg.d); }
-void xor_ae() { cpu_reg.a = _xor(cpu_reg.a, cpu_reg.e); }
-void xor_ah() { cpu_reg.a = _xor(cpu_reg.a, cpu_reg.h); }
-void xor_al() { cpu_reg.a = _xor(cpu_reg.a, cpu_reg.l); }
-void xor_aa() { cpu_reg.a = _xor(cpu_reg.a, cpu_reg.a); }
-void xor_ax() { cpu_reg.a = _xor(cpu_reg.a, mem_read(cpu_reg.hl)); }
-void xor_an() { cpu_reg.a = _xor(cpu_reg.a, read_n8()); }
+void xor_ab() { cpu_reg.a = _xor(cpu_reg.a, cpu_reg.b); }  // 0xA8
+void xor_ac() { cpu_reg.a = _xor(cpu_reg.a, cpu_reg.c); }  // 0xA9
+void xor_ad() { cpu_reg.a = _xor(cpu_reg.a, cpu_reg.d); }  // 0xAA
+void xor_ae() { cpu_reg.a = _xor(cpu_reg.a, cpu_reg.e); }  // 0xAB
+void xor_ah() { cpu_reg.a = _xor(cpu_reg.a, cpu_reg.h); }  // 0xAC
+void xor_al() { cpu_reg.a = _xor(cpu_reg.a, cpu_reg.l); }  // 0xAD
+void xor_aa() { cpu_reg.a = _xor(cpu_reg.a, cpu_reg.a); }  // 0xAF
+void xor_ax() { cpu_reg.a = _xor(cpu_reg.a, mem_read(cpu_reg.hl)); }  // 0xAE
+void xor_an() { cpu_reg.a = _xor(cpu_reg.a, read_n8()); }  // 0xEE
 
 u8 _or(u8 a, u8 b) {
     u8 result = a | b;
@@ -275,15 +287,15 @@ u8 _or(u8 a, u8 b) {
     return result;
 }
 
-void or_ab() { cpu_reg.a = _or(cpu_reg.a, cpu_reg.b); }
-void or_ac() { cpu_reg.a = _or(cpu_reg.a, cpu_reg.c); }
-void or_ad() { cpu_reg.a = _or(cpu_reg.a, cpu_reg.d); }
-void or_ae() { cpu_reg.a = _or(cpu_reg.a, cpu_reg.e); }
-void or_ah() { cpu_reg.a = _or(cpu_reg.a, cpu_reg.h); }
-void or_al() { cpu_reg.a = _or(cpu_reg.a, cpu_reg.l); }
-void or_aa() { cpu_reg.a = _or(cpu_reg.a, cpu_reg.a); }
-void or_ax() { cpu_reg.a = _or(cpu_reg.a, mem_read(cpu_reg.hl)); }
-void or_an() { cpu_reg.a = _or(cpu_reg.a, read_n8()); }
+void or_ab() { cpu_reg.a = _or(cpu_reg.a, cpu_reg.b); }  // 0xB0
+void or_ac() { cpu_reg.a = _or(cpu_reg.a, cpu_reg.c); }  // 0xB1
+void or_ad() { cpu_reg.a = _or(cpu_reg.a, cpu_reg.d); }  // 0xB2
+void or_ae() { cpu_reg.a = _or(cpu_reg.a, cpu_reg.e); }  // 0xB3
+void or_ah() { cpu_reg.a = _or(cpu_reg.a, cpu_reg.h); }  // 0xB4
+void or_al() { cpu_reg.a = _or(cpu_reg.a, cpu_reg.l); }  // 0xB5
+void or_aa() { cpu_reg.a = _or(cpu_reg.a, cpu_reg.a); }  // 0xB7
+void or_ax() { cpu_reg.a = _or(cpu_reg.a, mem_read(cpu_reg.hl)); }  // 0xB6
+void or_an() { cpu_reg.a = _or(cpu_reg.a, read_n8()); }  // 0xF6
 
 u8 _cmp(i8 a, i8 b) {
     i8 result = a - b;
@@ -295,15 +307,15 @@ u8 _cmp(i8 a, i8 b) {
     return result;
 }
 
-void cmp_ab() { cpu_reg.a = _cmp(cpu_reg.a, cpu_reg.b); }
-void cmp_ac() { cpu_reg.a = _cmp(cpu_reg.a, cpu_reg.c); }
-void cmp_ad() { cpu_reg.a = _cmp(cpu_reg.a, cpu_reg.d); }
-void cmp_ae() { cpu_reg.a = _cmp(cpu_reg.a, cpu_reg.e); }
-void cmp_ah() { cpu_reg.a = _cmp(cpu_reg.a, cpu_reg.h); }
-void cmp_al() { cpu_reg.a = _cmp(cpu_reg.a, cpu_reg.l); }
-void cmp_aa() { cpu_reg.a = _cmp(cpu_reg.a, cpu_reg.a); }
-void cmp_ax() { cpu_reg.a = _cmp(cpu_reg.a, mem_read(cpu_reg.hl)); }
-void cmp_an() { cpu_reg.a = _cmp(cpu_reg.a, read_n8()); }
+void cmp_ab() { cpu_reg.a = _cmp(cpu_reg.a, cpu_reg.b); }  // 0xB8
+void cmp_ac() { cpu_reg.a = _cmp(cpu_reg.a, cpu_reg.c); }  // 0xB9
+void cmp_ad() { cpu_reg.a = _cmp(cpu_reg.a, cpu_reg.d); }  // 0xBA
+void cmp_ae() { cpu_reg.a = _cmp(cpu_reg.a, cpu_reg.e); }  // 0xBB
+void cmp_ah() { cpu_reg.a = _cmp(cpu_reg.a, cpu_reg.h); }  // 0xBC
+void cmp_al() { cpu_reg.a = _cmp(cpu_reg.a, cpu_reg.l); }  // 0xBD
+void cmp_aa() { cpu_reg.a = _cmp(cpu_reg.a, cpu_reg.a); }  // 0xBF
+void cmp_ax() { cpu_reg.a = _cmp(cpu_reg.a, mem_read(cpu_reg.hl)); }  // 0xBE
+void cmp_an() { cpu_reg.a = _cmp(cpu_reg.a, read_n8()); }  // 0xFE
 
 u8 _inc(u8 x) {
     x++;
@@ -314,14 +326,14 @@ u8 _inc(u8 x) {
     return x;
 }
 
-void inc_b() { cpu_reg.b = _inc(cpu_reg.b); }
-void inc_c() { cpu_reg.c = _inc(cpu_reg.c); }
-void inc_d() { cpu_reg.d = _inc(cpu_reg.d); }
-void inc_e() { cpu_reg.e = _inc(cpu_reg.e); }
-void inc_h() { cpu_reg.h = _inc(cpu_reg.h); }
-void inc_l() { cpu_reg.l = _inc(cpu_reg.l); }
-void inc_a() { cpu_reg.a = _inc(cpu_reg.a); }
-void inc_x() { mem_write(cpu_reg.hl, _inc(mem_read(cpu_reg.hl))); }
+void inc_b() { cpu_reg.b = _inc(cpu_reg.b); }  // 0x04
+void inc_c() { cpu_reg.c = _inc(cpu_reg.c); }  // 0x0C
+void inc_d() { cpu_reg.d = _inc(cpu_reg.d); }  // 0x14
+void inc_e() { cpu_reg.e = _inc(cpu_reg.e); }  // 0x1C
+void inc_h() { cpu_reg.h = _inc(cpu_reg.h); }  // 0x24
+void inc_l() { cpu_reg.l = _inc(cpu_reg.l); }  // 0x2C
+void inc_a() { cpu_reg.a = _inc(cpu_reg.a); }  // 0x3C
+void inc_x() { mem_write(cpu_reg.hl, _inc(mem_read(cpu_reg.hl))); }  // 0x34
 
 u8 _dec(u8 x) {
     x--;
@@ -332,14 +344,14 @@ u8 _dec(u8 x) {
     return x;
 }
 
-void dec_b() { cpu_reg.b = _dec(cpu_reg.b); }
-void dec_c() { cpu_reg.c = _dec(cpu_reg.c); }
-void dec_d() { cpu_reg.d = _dec(cpu_reg.d); }
-void dec_e() { cpu_reg.e = _dec(cpu_reg.e); }
-void dec_h() { cpu_reg.h = _dec(cpu_reg.h); }
-void dec_l() { cpu_reg.l = _dec(cpu_reg.l); }
-void dec_a() { cpu_reg.a = _dec(cpu_reg.a); }
-void dec_x() { mem_write(cpu_reg.hl, _dec(mem_read(cpu_reg.hl))); }
+void dec_b() { cpu_reg.b = _dec(cpu_reg.b); }  // 0x05
+void dec_c() { cpu_reg.c = _dec(cpu_reg.c); }  // 0x0D
+void dec_d() { cpu_reg.d = _dec(cpu_reg.d); }  // 0x15
+void dec_e() { cpu_reg.e = _dec(cpu_reg.e); }  // 0x1D
+void dec_h() { cpu_reg.h = _dec(cpu_reg.h); }  // 0x25
+void dec_l() { cpu_reg.l = _dec(cpu_reg.l); }  // 0x2D
+void dec_a() { cpu_reg.a = _dec(cpu_reg.a); }  // 0x3D
+void dec_x() { mem_write(cpu_reg.hl, _dec(mem_read(cpu_reg.hl))); }  // 0x35
 
 u16 _add16(u16 a, u16 b) {
     u16 result = a + b;
@@ -350,10 +362,10 @@ u16 _add16(u16 a, u16 b) {
     return result;
 }
 
-void add16_bc() { cpu_reg.hl = _add16(cpu_reg.hl, cpu_reg.bc); }
-void add16_de() { cpu_reg.hl = _add16(cpu_reg.hl, cpu_reg.de); }
-void add16_hl() { cpu_reg.hl = _add16(cpu_reg.hl, cpu_reg.hl); }
-void add16_sp() { cpu_reg.hl = _add16(cpu_reg.hl, cpu_reg.sp); }
+void add16_bc() { cpu_reg.hl = _add16(cpu_reg.hl, cpu_reg.bc); }  // 0x09
+void add16_de() { cpu_reg.hl = _add16(cpu_reg.hl, cpu_reg.de); }  // 0x19
+void add16_hl() { cpu_reg.hl = _add16(cpu_reg.hl, cpu_reg.hl); }  // 0x29
+void add16_sp() { cpu_reg.hl = _add16(cpu_reg.hl, cpu_reg.sp); }  // 0x39
 
 void add_sp_n() {
     i8 x = read_n8();
@@ -363,14 +375,14 @@ void add_sp_n() {
     bool c = (cpu_reg.sp & 0xFF) + (x & 0xFF) > 0xFF;
     set_flags(z, n, h, c);
     cpu_reg.sp += x;
-}
+}  // 0xE8
 
-void inc16_bc() { cpu_reg.bc++; }
-void inc16_de() { cpu_reg.de++; }
-void inc16_hl() { cpu_reg.hl++; }
-void inc16_sp() { cpu_reg.sp++; }
+void inc16_bc() { cpu_reg.bc++; }  // 0x03
+void inc16_de() { cpu_reg.de++; }  // 0x13
+void inc16_hl() { cpu_reg.hl++; }  // 0x23
+void inc16_sp() { cpu_reg.sp++; }  // 0x33
 
-void dec16_bc() { cpu_reg.bc--; }
-void dec16_de() { cpu_reg.de--; }
-void dec16_hl() { cpu_reg.hl--; }
-void dec16_sp() { cpu_reg.sp--; }
+void dec16_bc() { cpu_reg.bc--; }  // 0x0B
+void dec16_de() { cpu_reg.de--; }  // 0x1B
+void dec16_hl() { cpu_reg.hl--; }  // 0x2B
+void dec16_sp() { cpu_reg.sp--; }  // 0x3B
