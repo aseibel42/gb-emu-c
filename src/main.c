@@ -1,10 +1,13 @@
 #include "cpu.h"
 #include "debug.h"
+#include "mem.h"
 
 int main(int argc, char **argv) {
     cpu_init();
-    cpu_registers.a = 0x12;
-    cpu_registers.f = 0x34;
+    mem_write(cpu_reg.pc, 0x41);
+    cpu_step();
+    mem_write(cpu_reg.pc, 0x80);
+    cpu_step();
     debug_registers();
     return 0;
 }

@@ -22,7 +22,7 @@ struct cpu_state {
     bool stepping;
 };
 
-extern struct cpu_registers cpu_registers;
+extern struct cpu_registers cpu_reg;
 extern struct cpu_state cpu_state;
 
 void cpu_init();
