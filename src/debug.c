@@ -14,4 +14,5 @@ void debug_registers() {
     printf("  $SP: %04x  $PC: %04x", cpu_reg.sp, cpu_reg.pc);
     printf("  $AF: %04x  $BC: %04x", cpu_reg.af, cpu_reg.bc);
     printf("  $DE: %04x  $HL: %04x", cpu_reg.de, cpu_reg.hl);
+    printf("\n");
 }

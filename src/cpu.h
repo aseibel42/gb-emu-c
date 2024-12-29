@@ -13,15 +13,10 @@ struct cpu_registers {
     REG(h, l);
 };
 
-struct cpu_state {
-    u8 interrupt_register;
-    u8 interrupt_flags;
-    bool interrupt_master_enabled;
-    bool halted;
-};
-
 extern struct cpu_registers cpu_reg;
-extern struct cpu_state cpu_state;
+extern bool interrupt_master_enabled;
+extern bool halted;
+extern bool stopped;
 
 void cpu_init();
 bool cpu_step();
@@ -39,3 +34,6 @@ bool flag_h();
 bool flag_c();
 
 void set_flags(i8 z, i8 n, i8 h, i8 c);
+
+u8 ie_register();
+u8 if_register();

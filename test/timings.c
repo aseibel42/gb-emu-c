@@ -340,7 +340,6 @@ void test_instruction() {
     sprintf(message, "(name: %s, code: 0x%02X)", tc.name, code);
 
     mem[cpu_reg.pc] = code;
-    // debug_flags();
     cpu_step();
 
     TEST_ASSERT_EQUAL_MESSAGE(tc.ticks_expected, ticks, message);

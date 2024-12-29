@@ -1,10 +1,15 @@
 #include "cpu.h"
 #include "emu.h"
 #include "instruction.h"
+#include "interrupt.h"
 #include "mem.h"
+#include "stack.h"
+#include "util.h"
 
 struct cpu_registers cpu_reg = {};
-struct cpu_state cpu_state = {};
+bool interrupt_master_enabled = false;
+bool halted = false;
+bool stopped = false;
 
 void cpu_init() {
     cpu_reg.pc = 0x0100;
@@ -20,16 +25,30 @@ void cpu_init() {
     cpu_reg.h = 0x01;
     cpu_reg.l = 0x4D;
 
-    cpu_state.interrupt_register = 0;
-    cpu_state.interrupt_flags = 0;
+    halted = false;
+    interrupt_master_enabled = false;
 }
 
 bool cpu_step() {
-    // fetch instruction
-    u8 opcode = fetch();
+    if (!halted) {
+        // fetch instruction
+        u8 opcode = fetch();
 
-    // execute instruction
-    op[opcode]();
+        // execute instruction
+        op[opcode]();
+
+        // handle interrupts (if current instruction is not ei)
+        if (interrupt_master_enabled && opcode != 0xFB) {
+            cpu_handle_interrupts();
+        }
+    } else {
+        cpu_cycle();
+
+        // resume if there is an interrupt pending
+        if (ie_register() & if_register()) {
+            halted = false;
+        }
+    }
 
     return true;
 }
@@ -81,4 +100,47 @@ void set_flags(i8 z, i8 n, i8 h, i8 c) {
     if (n != -1) cpu_reg.f = bit_assign(cpu_reg.f, 6, n);
     if (h != -1) cpu_reg.f = bit_assign(cpu_reg.f, 5, h);
     if (c != -1) cpu_reg.f = bit_assign(cpu_reg.f, 4, c);
+}
+
+bool interrupt_check(u8 interrupt_type) {
+    // An interrupt is executed only if enabled (IE) and requested (IF)
+    bool interrupt_pending = true;
+    interrupt_pending &= bit_read(ie_register(), interrupt_type); // IE register
+    interrupt_pending &= bit_read(if_register(), interrupt_type); // IF register
+
+    if (interrupt_pending) {
+        // acknowledge interrupt by clearing corresponding bit in IF register
+        mem[0xFF0F] = bit_clear(mem[0xFF0F], interrupt_type);
+        halted = false;
+        interrupt_master_enabled = false;
+    }
+
+    return interrupt_pending;
+}
+
+void cpu_handle_interrupts() {
+    if (interrupt_check(INTERRUPT_VBLANK)) {
+        stack_push16(cpu_reg.pc);
+        cpu_jump(ADDR_VBLANK);
+    } else if (interrupt_check(INTERRUPT_LCD_STAT)) {
+        stack_push16(cpu_reg.pc);
+        cpu_jump(ADDR_LCD_STAT);
+    } else if (interrupt_check(INTERRUPT_TIMER)) {
+        stack_push16(cpu_reg.pc);
+        cpu_jump(ADDR_TIMER);
+    } else if (interrupt_check(INTERRUPT_SERIAL)) {
+        stack_push16(cpu_reg.pc);
+        cpu_jump(ADDR_SERIAL);
+    } else if (interrupt_check(INTERRUPT_JOYPAD)) {
+        stack_push16(cpu_reg.pc);
+        cpu_jump(ADDR_JOYPAD);
+    }
+}
+
+u8 ie_register() {
+    return mem[0xFFFF];
+}
+
+u8 if_register() {
+    return mem[0xFF0F];
 }

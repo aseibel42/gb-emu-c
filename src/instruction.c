@@ -8,17 +8,20 @@
 */
 
 void nop() {}  // 0x00
-void halt() { /* TODO */ }  // 0x76
-void stop() { /* TODO */ }  // 0x10
+void halt() { halted = true; }  // 0x76
+void stop() { stopped = true; }  // 0x10
 
 /*
  * Interrupt instructions
 */
 
-// TODO: in hardware, enabling/disabling interrupts may not happen immediately
-void di() { cpu_state.interrupt_master_enabled = false; }  // 0xF3
-void ei() { cpu_state.interrupt_master_enabled = true; }  // 0xFB
-void ret_i() { cpu_state.interrupt_master_enabled = true; cpu_reg.pc = stack_pop16(); cpu_cycle(); }  // 0xD9
+void di() { interrupt_master_enabled = false; }  // 0xF3
+
+// The IME flag is only set after the instruction following EI
+void ei() { interrupt_master_enabled = true; }  // 0xFB
+
+// This is equivalent to executing EI then RET, meaning that IME is set right after this instruction.
+void ret_i() { interrupt_master_enabled = true; ret(); }  // 0xD9
 
 /*
  * Load instructions
