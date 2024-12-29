@@ -25,6 +25,7 @@ extern struct cpu_state cpu_state;
 
 void cpu_init();
 bool cpu_step();
+void cpu_cycle();
 
 u8 fetch();
 u16 fetch16();

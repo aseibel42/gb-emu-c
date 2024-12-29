@@ -423,7 +423,21 @@ void cmpl_a() {
 }  // 0x2F
 
 void dec_adj_a() {
-    /* TODO */
+    u8 x = 0;
+    bool c = false;
+
+    if (flag_h() || (!flag_n() && (cpu_reg.a & 0xF) > 9)) {
+        x |= 0x6;
+    }
+
+    if (flag_c() || (!flag_n() && cpu_reg.a > 0x99)) {
+        x |= 0x60;
+        c = true;
+    }
+
+    cpu_reg.a += flag_n() ? -x : x;
+    bool z = !cpu_reg.a;
+    set_flags(z, -1, 0, c);
 }  // 0x27
 
 void ccf(void) { set_flags(-1, 0, 0, !flag_c()); }  // 0x3F

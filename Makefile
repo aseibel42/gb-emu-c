@@ -26,6 +26,9 @@ CFLAGS := -Wall -Wextra -std=c11
 LDFLAGS := -L./lib
 LDLIBS :=
 
+# Testing related
+TESTDIR := ./test/
+
 # Default commands
 RM = rm
 DIR = mkdir
@@ -58,8 +61,13 @@ clean:
 $(OUTDIR) $(OBJDIR):
 	$(DIR) $@
 
-# Run the executable (this doesn't work because the "./" is lost somehow...)
+# Run the executable
 run: $(OUTDIR)$(EXE)
 	@$<
 
-.PHONY: all clean run
+# Run tests
+test-timings: $(TESTDIR)$(UNITY) $(TESTDIR)$(T_TIME)
+	$(CC) $(CFLAGS) src/cpu.c src/emu.c src/mem.c src/stack.c src/instruction.c src/instruction_table.c test/unity.c test/timings.c -o $(OUTDIR)test_timings
+	$(OUTDIR)test_timings
+
+.PHONY: all clean run test-timings

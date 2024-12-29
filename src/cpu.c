@@ -1,4 +1,5 @@
 #include "cpu.h"
+#include "emu.h"
 #include "instruction.h"
 #include "mem.h"
 
@@ -30,7 +31,13 @@ bool cpu_step() {
     // execute instruction
     op[opcode]();
 
-    return false;
+    return true;
+}
+
+void cpu_cycle() {
+    for (u8 i = 0; i < 4; i++) {
+        ticks++;
+    }
 }
 
 u8 fetch() {
