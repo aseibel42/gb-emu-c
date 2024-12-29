@@ -16,10 +16,8 @@ struct cpu_registers {
 struct cpu_state {
     u8 interrupt_register;
     u8 interrupt_flags;
-    bool enabling_interrupt_master;
     bool interrupt_master_enabled;
     bool halted;
-    bool stepping;
 };
 
 extern struct cpu_registers cpu_reg;
