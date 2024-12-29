@@ -255,7 +255,7 @@ Instruction op[0x100] = {
     ret_z,
     ret,
     jmp_z,
-    nop,
+    cb,
     call_z,
     call,
     adc_an,

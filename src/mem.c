@@ -1,3 +1,4 @@
+#include "cpu.h"
 #include "mem.h"
 
 /*
@@ -20,10 +21,12 @@
 u8 mem[0x10000] = {};
 
 u8 mem_read(u16 addr) {
+    cpu_cycle();
     return mem[addr];
 }
 
 void mem_write(u16 addr, u8 value) {
+    cpu_cycle();
     mem[addr] = value;
 }
 

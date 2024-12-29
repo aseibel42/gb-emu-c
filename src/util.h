@@ -27,7 +27,7 @@ static inline u8 bit_clear(u8 x, u8 n) {
 }
 
 static inline u8 bit_assign(u8 x, u8 n, bool f) {
-    return x ^ (-f ^ x) & (1 << n);
+    return x ^ ((-f ^ x) & (1 << n));
 }
 
 static inline u16 reverse(u16 x) {

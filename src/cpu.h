@@ -30,6 +30,9 @@ void cpu_cycle();
 u8 fetch();
 u16 fetch16();
 
+void cpu_jump(u16 addr);
+void cpu_jmpr(i8 x);
+
 bool flag_z();
 bool flag_n();
 bool flag_h();

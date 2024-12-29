@@ -50,6 +50,16 @@ u16 fetch16() {
     return u16_from_bytes((u16_bytes){ hi, lo });
 }
 
+void cpu_jump(u16 addr) {
+    cpu_cycle();
+    cpu_reg.pc = addr;
+}
+
+void cpu_jmpr(i8 x) {
+    cpu_cycle();
+    cpu_reg.pc += x;
+}
+
 bool flag_z() {
     return bit_read(cpu_reg.f, 7);
 }
@@ -67,8 +77,8 @@ bool flag_c() {
 }
 
 void set_flags(i8 z, i8 n, i8 h, i8 c) {
-    if (z != -1) bit_assign(cpu_reg.f, 7, z);
-    if (n != -1) bit_assign(cpu_reg.f, 6, n);
-    if (h != -1) bit_assign(cpu_reg.f, 5, h);
-    if (c != -1) bit_assign(cpu_reg.f, 4, c);
+    if (z != -1) cpu_reg.f = bit_assign(cpu_reg.f, 7, z);
+    if (n != -1) cpu_reg.f = bit_assign(cpu_reg.f, 6, n);
+    if (h != -1) cpu_reg.f = bit_assign(cpu_reg.f, 5, h);
+    if (c != -1) cpu_reg.f = bit_assign(cpu_reg.f, 4, c);
 }

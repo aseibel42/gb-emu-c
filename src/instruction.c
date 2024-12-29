@@ -18,7 +18,7 @@ void stop() { /* TODO */ }  // 0x10
 // TODO: in hardware, enabling/disabling interrupts may not happen immediately
 void di() { cpu_state.interrupt_master_enabled = false; }  // 0xF3
 void ei() { cpu_state.interrupt_master_enabled = true; }  // 0xFB
-void ret_i() { cpu_state.interrupt_master_enabled = true; cpu_reg.pc = stack_pop16(); }  // 0xD9
+void ret_i() { cpu_state.interrupt_master_enabled = true; cpu_reg.pc = stack_pop16(); cpu_cycle(); }  // 0xD9
 
 /*
  * Load instructions
@@ -127,10 +127,11 @@ void ldd_xa() { mem_write(cpu_reg.hl--, cpu_reg.a); }  // 0x32
 void ldi_ax() { cpu_reg.a = mem_read(cpu_reg.hl++); }  // 0x2A
 void ldi_xa() { mem_write(cpu_reg.hl++, cpu_reg.a); }  // 0x22
 
-void ld_sp_hl() { cpu_reg.sp = cpu_reg.hl; }  // 0xF9
+void ld_sp_hl() { cpu_jump(cpu_reg.hl); }  // 0xF9
 
 void ld_hl_sp_n() {
-    u8 x = fetch();
+    i8 x = fetch();
+    cpu_cycle();
     cpu_reg.hl = cpu_reg.sp + x;
     bool z = false;
     bool n = false;
@@ -141,10 +142,11 @@ void ld_hl_sp_n() {
 
 void ld_nn_sp() { mem_write16(fetch16(), cpu_reg.sp); }  // 0x08
 
-void push_af() { stack_push16(cpu_reg.af); }  // 0xF5
-void push_bc() { stack_push16(cpu_reg.bc); }  // 0xC5
-void push_de() { stack_push16(cpu_reg.de); }  // 0xD5
-void push_hl() { stack_push16(cpu_reg.hl); }  // 0xE5
+// NOTE: push instructions have unexplained internal CPU cycle
+void push_af() { cpu_cycle(); stack_push16(cpu_reg.af); }  // 0xF5
+void push_bc() { cpu_cycle(); stack_push16(cpu_reg.bc); }  // 0xC5
+void push_de() { cpu_cycle(); stack_push16(cpu_reg.de); }  // 0xD5
+void push_hl() { cpu_cycle(); stack_push16(cpu_reg.hl); }  // 0xE5
 
 void pop_af() { cpu_reg.af = stack_pop16() & 0x0FFF; }  // 0xF1
 void pop_bc() { cpu_reg.bc = stack_pop16(); }  // 0xC1
@@ -360,10 +362,10 @@ u16 _add16(u16 a, u16 b) {
     return result;
 }
 
-void add16_bc() { cpu_reg.hl = _add16(cpu_reg.hl, cpu_reg.bc); }  // 0x09
-void add16_de() { cpu_reg.hl = _add16(cpu_reg.hl, cpu_reg.de); }  // 0x19
-void add16_hl() { cpu_reg.hl = _add16(cpu_reg.hl, cpu_reg.hl); }  // 0x29
-void add16_sp() { cpu_reg.hl = _add16(cpu_reg.hl, cpu_reg.sp); }  // 0x39
+void add16_bc() { cpu_cycle(); cpu_reg.hl = _add16(cpu_reg.hl, cpu_reg.bc); }  // 0x09
+void add16_de() { cpu_cycle(); cpu_reg.hl = _add16(cpu_reg.hl, cpu_reg.de); }  // 0x19
+void add16_hl() { cpu_cycle(); cpu_reg.hl = _add16(cpu_reg.hl, cpu_reg.hl); }  // 0x29
+void add16_sp() { cpu_cycle(); cpu_reg.hl = _add16(cpu_reg.hl, cpu_reg.sp); }  // 0x39
 
 void add_sp_n() {
     i8 x = fetch();
@@ -372,18 +374,19 @@ void add_sp_n() {
     bool h = (cpu_reg.sp & 0xF) + (x & 0xF) > 0xF;
     bool c = (cpu_reg.sp & 0xFF) + (x & 0xFF) > 0xFF;
     set_flags(z, n, h, c);
-    cpu_reg.sp += x;
+    cpu_cycle(); // 16-bit add incurs an extra cpu cycle
+    cpu_jmpr(x);
 }  // 0xE8
 
-void inc16_bc() { cpu_reg.bc++; }  // 0x03
-void inc16_de() { cpu_reg.de++; }  // 0x13
-void inc16_hl() { cpu_reg.hl++; }  // 0x23
-void inc16_sp() { cpu_reg.sp++; }  // 0x33
+void inc16_bc() { cpu_cycle(); cpu_reg.bc++; }  // 0x03
+void inc16_de() { cpu_cycle(); cpu_reg.de++; }  // 0x13
+void inc16_hl() { cpu_cycle(); cpu_reg.hl++; }  // 0x23
+void inc16_sp() { cpu_cycle(); cpu_reg.sp++; }  // 0x33
 
-void dec16_bc() { cpu_reg.bc--; }  // 0x0B
-void dec16_de() { cpu_reg.de--; }  // 0x1B
-void dec16_hl() { cpu_reg.hl--; }  // 0x2B
-void dec16_sp() { cpu_reg.sp--; }  // 0x3B
+void dec16_bc() { cpu_cycle(); cpu_reg.bc--; }  // 0x0B
+void dec16_de() { cpu_cycle(); cpu_reg.de--; }  // 0x1B
+void dec16_hl() { cpu_cycle(); cpu_reg.hl--; }  // 0x2B
+void dec16_sp() { cpu_cycle(); cpu_reg.sp--; }  // 0x3B
 
 /*
  * Bitwise instructions
@@ -447,40 +450,42 @@ void scf(void) { set_flags(-1, 0, 0, 1); }  // 0x37
  * Control flow instructions
 */
 
-void jmp() { u16 nn = fetch16(); cpu_reg.pc = nn; }  // 0xC3
-void jmp_z() { u16 nn = fetch16(); if (flag_z()) cpu_reg.pc = nn; }  // 0xCA
-void jmp_c() { u16 nn = fetch16(); if (flag_c()) cpu_reg.pc = nn; }  // 0xDA
-void jmp_nz() { u16 nn = fetch16(); if (!flag_z()) cpu_reg.pc = nn; }  // 0xC2
-void jmp_nc() { u16 nn = fetch16(); if (!flag_c()) cpu_reg.pc = nn; }  // 0xD2
+void jmp() { u16 nn = fetch16(); cpu_jump(nn); }  // 0xC3
+void jmp_z() { u16 nn = fetch16(); if (flag_z()) cpu_jump(nn); }  // 0xCA
+void jmp_c() { u16 nn = fetch16(); if (flag_c()) cpu_jump(nn); }  // 0xDA
+void jmp_nz() { u16 nn = fetch16(); if (!flag_z()) cpu_jump(nn); }  // 0xC2
+void jmp_nc() { u16 nn = fetch16(); if (!flag_c()) cpu_jump(nn); }  // 0xD2
 
-void jmpr() { i8 n = fetch(); cpu_reg.pc += n; }  // 0x18
-void jmpr_z() { i8 n = fetch(); if (flag_z()) cpu_reg.pc += n; }  // 0x28
-void jmpr_c() { i8 n = fetch(); if (flag_c()) cpu_reg.pc += n; }  // 0x38
-void jmpr_nz() { i8 n = fetch(); if (!flag_z()) cpu_reg.pc += n; }  // 0x20
-void jmpr_nc() { i8 n = fetch(); if (!flag_c()) cpu_reg.pc += n; }  // 0x30
+void jmpr() { i8 n = fetch(); cpu_jmpr(n); }  // 0x18
+void jmpr_z() { i8 n = fetch(); if (flag_z()) cpu_jmpr(n); }  // 0x28
+void jmpr_c() { i8 n = fetch(); if (flag_c()) cpu_jmpr(n); }  // 0x38
+void jmpr_nz() { i8 n = fetch(); if (!flag_z()) cpu_jmpr(n); }  // 0x20
+void jmpr_nc() { i8 n = fetch(); if (!flag_c()) cpu_jmpr(n); }  // 0x30
 
+// NOTE: for some reason, this jump does not cost an extra CPU cycle like every other jump
 void jmp_x() { cpu_reg.pc = cpu_reg.hl; }  // 0xE9
 
-void call() { u16 nn = fetch16(); stack_push16(cpu_reg.pc); cpu_reg.pc = nn; }  // 0xCD
-void call_z() { u16 nn = fetch16(); if (flag_z()) { stack_push16(cpu_reg.pc); cpu_reg.pc = nn; } }  // 0xCC
-void call_c() { u16 nn = fetch16(); if (flag_c()) { stack_push16(cpu_reg.pc); cpu_reg.pc = nn; } }  // 0xDC
-void call_nz() { u16 nn = fetch16(); if (!flag_z()) { stack_push16(cpu_reg.pc); cpu_reg.pc = nn; } }  // 0xC4
-void call_nc() { u16 nn = fetch16(); if (!flag_c()) { stack_push16(cpu_reg.pc); cpu_reg.pc = nn; } }  // 0xD4
+void call() { u16 nn = fetch16(); stack_push16(cpu_reg.pc); cpu_jump(nn); }  // 0xCD
+void call_z() { u16 nn = fetch16(); if (flag_z()) { stack_push16(cpu_reg.pc); cpu_jump(nn); } }  // 0xCC
+void call_c() { u16 nn = fetch16(); if (flag_c()) { stack_push16(cpu_reg.pc); cpu_jump(nn); } }  // 0xDC
+void call_nz() { u16 nn = fetch16(); if (!flag_z()) { stack_push16(cpu_reg.pc); cpu_jump(nn); } }  // 0xC4
+void call_nc() { u16 nn = fetch16(); if (!flag_c()) { stack_push16(cpu_reg.pc); cpu_jump(nn); } }  // 0xD4
 
-void ret() { u16 nn = stack_pop16(); cpu_reg.pc = nn; }  // 0xC9
-void ret_z() { u16 nn = stack_pop16(); if (flag_z()) { cpu_reg.pc = nn; } }  // 0xC8
-void ret_c() { u16 nn = stack_pop16(); if (flag_c()) { cpu_reg.pc = nn; } }  // 0xD8
-void ret_nz() { u16 nn = stack_pop16(); if (!flag_z()) { cpu_reg.pc = nn; } }  // 0xC0
-void ret_nc() { u16 nn = stack_pop16(); if (!flag_c()) { cpu_reg.pc = nn; } }  // 0xD0
+// NOTE: conditional return has unexplained internal CPU cycle
+void ret() { u16 nn = stack_pop16(); cpu_jump(nn); }  // 0xC9
+void ret_z() { cpu_cycle(); if (flag_z()) { u16 nn = stack_pop16(); cpu_jump(nn); } }  // 0xC8
+void ret_c() { cpu_cycle(); if (flag_c()) { u16 nn = stack_pop16(); cpu_jump(nn); } }  // 0xD8
+void ret_nz() { cpu_cycle(); if (!flag_z()) { u16 nn = stack_pop16(); cpu_jump(nn); } }  // 0xC0
+void ret_nc() { cpu_cycle(); if (!flag_c()) { u16 nn = stack_pop16(); cpu_jump(nn); } }  // 0xD0
 
-void rst_00() { stack_push16(cpu_reg.pc); cpu_reg.pc = 0x0000; }  // 0xC7
-void rst_08() { stack_push16(cpu_reg.pc); cpu_reg.pc = 0x0008; }  // 0xCF
-void rst_10() { stack_push16(cpu_reg.pc); cpu_reg.pc = 0x0010; }  // 0xD7
-void rst_18() { stack_push16(cpu_reg.pc); cpu_reg.pc = 0x0018; }  // 0xDF
-void rst_20() { stack_push16(cpu_reg.pc); cpu_reg.pc = 0x0020; }  // 0xE7
-void rst_28() { stack_push16(cpu_reg.pc); cpu_reg.pc = 0x0028; }  // 0xEF
-void rst_30() { stack_push16(cpu_reg.pc); cpu_reg.pc = 0x0030; }  // 0xF7
-void rst_38() { stack_push16(cpu_reg.pc); cpu_reg.pc = 0x0038; }  // 0xFF
+void rst_00() { stack_push16(cpu_reg.pc); cpu_jump(0x0000); }  // 0xC7
+void rst_08() { stack_push16(cpu_reg.pc); cpu_jump(0x0008); }  // 0xCF
+void rst_10() { stack_push16(cpu_reg.pc); cpu_jump(0x0010); }  // 0xD7
+void rst_18() { stack_push16(cpu_reg.pc); cpu_jump(0x0018); }  // 0xDF
+void rst_20() { stack_push16(cpu_reg.pc); cpu_jump(0x0020); }  // 0xE7
+void rst_28() { stack_push16(cpu_reg.pc); cpu_jump(0x0028); }  // 0xEF
+void rst_30() { stack_push16(cpu_reg.pc); cpu_jump(0x0030); }  // 0xF7
+void rst_38() { stack_push16(cpu_reg.pc); cpu_jump(0x0038); }  // 0xFF
 
 /*
  * CB instructions
