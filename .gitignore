@@ -10,6 +10,9 @@
 bin/
 obj/
 
+# Logs
+log/
+
 # Platform-dependent
 lib/
 

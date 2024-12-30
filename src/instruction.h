@@ -6,6 +6,7 @@ typedef void (*Instruction)(void);
 
 extern Instruction op[0x100];
 extern Instruction op_cb[0x100];
+extern const char op_name[0x100][12];
 
 void nop();
 void halt();

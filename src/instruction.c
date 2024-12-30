@@ -120,17 +120,17 @@ void ld_de_nn() { cpu_reg.de = fetch16(); }  // 0x11
 void ld_hl_nn() { cpu_reg.hl = fetch16(); }  // 0x21
 void ld_sp_nn() { cpu_reg.sp = fetch16(); }  // 0x31
 
-void ldio_c_a() { cpu_reg.a = mem_read(0xFF00 + cpu_reg.c); }  // 0xE2
-void ldio_a_c() { mem_write(0xFF00 + cpu_reg.c, cpu_reg.a); }  // 0xF2
-void ldio_n_a() { cpu_reg.a = mem_read(0xFF00 + fetch()); }  // 0xE0
-void ldio_a_n() { mem_write(0xFF00 + fetch(), cpu_reg.a); }  // 0xF0
+void ldio_c_a() { mem_write(0xFF00 + cpu_reg.c, cpu_reg.a); }  // 0xE2
+void ldio_a_c() { cpu_reg.a = mem_read(0xFF00 + cpu_reg.c); }  // 0xF2
+void ldio_n_a() { mem_write(0xFF00 + fetch(), cpu_reg.a); }  // 0xE0
+void ldio_a_n() { cpu_reg.a = mem_read(0xFF00 + fetch()); }  // 0xF0
 
 void ldd_ax() { cpu_reg.a = mem_read(cpu_reg.hl--); }  // 0x3A
 void ldd_xa() { mem_write(cpu_reg.hl--, cpu_reg.a); }  // 0x32
 void ldi_ax() { cpu_reg.a = mem_read(cpu_reg.hl++); }  // 0x2A
 void ldi_xa() { mem_write(cpu_reg.hl++, cpu_reg.a); }  // 0x22
 
-void ld_sp_hl() { cpu_jump(cpu_reg.hl); }  // 0xF9
+void ld_sp_hl() { cpu_cycle(); cpu_reg.sp = cpu_reg.hl; }  // 0xF9
 
 void ld_hl_sp_n() {
     i8 x = fetch();
@@ -151,7 +151,7 @@ void push_bc() { cpu_cycle(); stack_push16(cpu_reg.bc); }  // 0xC5
 void push_de() { cpu_cycle(); stack_push16(cpu_reg.de); }  // 0xD5
 void push_hl() { cpu_cycle(); stack_push16(cpu_reg.hl); }  // 0xE5
 
-void pop_af() { cpu_reg.af = stack_pop16() & 0x0FFF; }  // 0xF1
+void pop_af() { cpu_reg.af = stack_pop16() & 0xFFF0; }  // 0xF1
 void pop_bc() { cpu_reg.bc = stack_pop16(); }  // 0xC1
 void pop_de() { cpu_reg.de = stack_pop16(); }  // 0xD1
 void pop_hl() { cpu_reg.hl = stack_pop16(); }  // 0xE1
@@ -161,11 +161,11 @@ void pop_hl() { cpu_reg.hl = stack_pop16(); }  // 0xE1
  */
 
 u8 _add(u8 a, u8 b) {
-    u16 result = a + b;
+    u8 result = a + b;
     bool z = !result;
     bool n = false;
     bool h = (a & 0xF) + (b & 0xF) > 0xF;
-    bool c = result > 0xFF;
+    bool c = ((u16)a + b) > 0xFF;
     set_flags(z, n, h, c);
     return result;
 }
@@ -181,11 +181,11 @@ void add_ax() { cpu_reg.a = _add(cpu_reg.a, mem_read(cpu_reg.hl)); }  // 0x86
 void add_an() { cpu_reg.a = _add(cpu_reg.a, fetch()); }  // 0xC6
 
 u8 _adc(u8 a, u8 b) {
-    u16 result = a + b + flag_c();
+    u8 result = a + b + flag_c();
     bool z = !result;
     bool n = false;
     bool h = (a & 0xF) + (b & 0xF) + flag_c() > 0xF;
-    bool c = result > 0xFF;
+    bool c = ((u16)a + b + flag_c()) > 0xFF;
     set_flags(z, n, h, c);
     return result;
 }
@@ -200,14 +200,13 @@ void adc_aa() { cpu_reg.a = _adc(cpu_reg.a, cpu_reg.a); }  // 0x8F
 void adc_ax() { cpu_reg.a = _adc(cpu_reg.a, mem_read(cpu_reg.hl)); }  // 0x8E
 void adc_an() { cpu_reg.a = _adc(cpu_reg.a, fetch()); }  // 0xCE
 
-u8 _sub(i8 a, i8 b) {
-    i8 result = a - b;
-    bool z = !result;
+u8 _sub(u8 a, u8 b) {
+    bool z = a == b;
     bool n = true;
-    bool h = (a & 0xF) - (b & 0xF) < 0;
-    bool c = result < 0;
+    bool h = (a & 0xF) < (b & 0xF);
+    bool c = a < b;
     set_flags(z, n, h, c);
-    return result;
+    return a - b;
 }
 
 void sub_ab() { cpu_reg.a = _sub(cpu_reg.a, cpu_reg.b); }  // 0x90
@@ -220,12 +219,12 @@ void sub_aa() { cpu_reg.a = _sub(cpu_reg.a, cpu_reg.a); }  // 0x97
 void sub_ax() { cpu_reg.a = _sub(cpu_reg.a, mem_read(cpu_reg.hl)); }  // 0x96
 void sub_an() { cpu_reg.a = _sub(cpu_reg.a, fetch()); }  // 0xD6
 
-u8 _sbc(i8 a, i8 b) {
+u8 _sbc(u8 a, u8 b) {
     i8 result = a - b - flag_c();
     bool z = !result;
     bool n = true;
     bool h = (a & 0xF) - (b & 0xF) - flag_c() < 0;
-    bool c = result < 0;
+    bool c = (b + flag_c()) > a;
     set_flags(z, n, h, c);
     return result;
 }
@@ -300,25 +299,23 @@ void or_aa() { cpu_reg.a = _or(cpu_reg.a, cpu_reg.a); }  // 0xB7
 void or_ax() { cpu_reg.a = _or(cpu_reg.a, mem_read(cpu_reg.hl)); }  // 0xB6
 void or_an() { cpu_reg.a = _or(cpu_reg.a, fetch()); }  // 0xF6
 
-u8 _cmp(i8 a, i8 b) {
-    i8 result = a - b;
-    bool z = !result;
+void _cmp(u8 a, u8 b) {
+    bool z = a == b;
     bool n = true;
-    bool h = (a & 0xF) - (b & 0xF) < 0;
-    bool c = result < 0;
+    bool h = (a & 0xF) < (b & 0xF);
+    bool c = a < b;
     set_flags(z, n, h, c);
-    return result;
 }
 
-void cmp_ab() { cpu_reg.a = _cmp(cpu_reg.a, cpu_reg.b); }  // 0xB8
-void cmp_ac() { cpu_reg.a = _cmp(cpu_reg.a, cpu_reg.c); }  // 0xB9
-void cmp_ad() { cpu_reg.a = _cmp(cpu_reg.a, cpu_reg.d); }  // 0xBA
-void cmp_ae() { cpu_reg.a = _cmp(cpu_reg.a, cpu_reg.e); }  // 0xBB
-void cmp_ah() { cpu_reg.a = _cmp(cpu_reg.a, cpu_reg.h); }  // 0xBC
-void cmp_al() { cpu_reg.a = _cmp(cpu_reg.a, cpu_reg.l); }  // 0xBD
-void cmp_aa() { cpu_reg.a = _cmp(cpu_reg.a, cpu_reg.a); }  // 0xBF
-void cmp_ax() { cpu_reg.a = _cmp(cpu_reg.a, mem_read(cpu_reg.hl)); }  // 0xBE
-void cmp_an() { cpu_reg.a = _cmp(cpu_reg.a, fetch()); }  // 0xFE
+void cmp_ab() { _cmp(cpu_reg.a, cpu_reg.b); }  // 0xB8
+void cmp_ac() { _cmp(cpu_reg.a, cpu_reg.c); }  // 0xB9
+void cmp_ad() { _cmp(cpu_reg.a, cpu_reg.d); }  // 0xBA
+void cmp_ae() { _cmp(cpu_reg.a, cpu_reg.e); }  // 0xBB
+void cmp_ah() { _cmp(cpu_reg.a, cpu_reg.h); }  // 0xBC
+void cmp_al() { _cmp(cpu_reg.a, cpu_reg.l); }  // 0xBD
+void cmp_aa() { _cmp(cpu_reg.a, cpu_reg.a); }  // 0xBF
+void cmp_ax() { _cmp(cpu_reg.a, mem_read(cpu_reg.hl)); }  // 0xBE
+void cmp_an() { _cmp(cpu_reg.a, fetch()); }  // 0xFE
 
 u8 _inc(u8 x) {
     x++;
@@ -377,8 +374,9 @@ void add_sp_n() {
     bool h = (cpu_reg.sp & 0xF) + (x & 0xF) > 0xF;
     bool c = (cpu_reg.sp & 0xFF) + (x & 0xFF) > 0xFF;
     set_flags(z, n, h, c);
-    cpu_cycle(); // 16-bit add incurs an extra cpu cycle
-    cpu_jmpr(x);
+    cpu_cycle();
+    cpu_cycle();
+    cpu_reg.sp += x;
 }  // 0xE8
 
 void inc16_bc() { cpu_cycle(); cpu_reg.bc++; }  // 0x03
@@ -398,29 +396,25 @@ void dec16_sp() { cpu_cycle(); cpu_reg.sp--; }  // 0x3B
 void rotlc_a() {
     u8 c = cpu_reg.a >> 7;
     cpu_reg.a = (cpu_reg.a << 1) | c;
-    bool z = !cpu_reg.a;
-    set_flags(z, 0, 0, c);
+    set_flags(0, 0, 0, c);
 }  // 0x07
 
 void rotrc_a() {
     u8 c = cpu_reg.a & 1;
     cpu_reg.a = (cpu_reg.a >> 1) | (c << 7);
-    bool z = !cpu_reg.a;
-    set_flags(z, 0, 0, c);
+    set_flags(0, 0, 0, c);
 }  // 0x0F
 
 void rotl_a() {
     u8 c = cpu_reg.a >> 7;
     cpu_reg.a = (cpu_reg.a << 1) | flag_c();
-    bool z = !cpu_reg.a;
-    set_flags(z, 0, 0, c);
+    set_flags(0, 0, 0, c);
 }  // 0x17
 
 void rotr_a() {
     u8 c = cpu_reg.a & 1;
     cpu_reg.a = (cpu_reg.a >> 1) | (flag_c() << 7);
-    bool z = !cpu_reg.a;
-    set_flags(z, 0, 0, c);
+    set_flags(0, 0, 0, c);
 }  // 0x1F
 
 void cmpl_a() {
@@ -561,8 +555,8 @@ void rr_x() { mem_write(cpu_reg.hl, _rr(mem_read(cpu_reg.hl))); }  // CB 1E
 void rr_a() { cpu_reg.a = _rr(cpu_reg.a); }  // CB 1F
 
 u8 _sla(u8 r) {
-    u8 c = r & 0x08;
-    r = (r << 1) | (r & 1);
+    u8 c = r & 0x80;
+    r = r << 1;
     set_flags(!r, 0, 0, c);
     return r;
 }
@@ -607,9 +601,10 @@ void swap_l() { cpu_reg.l = _swap(cpu_reg.l); }  // CB 35
 void swap_x() { mem_write(cpu_reg.hl, _swap(mem_read(cpu_reg.hl))); }  // CB 36
 void swap_a() { cpu_reg.a = _swap(cpu_reg.a); }  // CB 37
 
+// SRL - shift register r right into carry (LSB -> c, MSB -> 0)
 u8 _srl(u8 r) {
     u8 c = r & 1;
-    r = (r >> 1) | ~(1 << 7);
+    r = (r >> 1) & ~(1 << 7);
     set_flags(!r, 0, 0, c);
     return r;
 }

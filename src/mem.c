@@ -27,6 +27,12 @@ u8 mem_read(u16 addr) {
 
 void mem_write(u16 addr, u8 value) {
     cpu_cycle();
+
+    // Writing anything to DIV register resets it to 0.
+    if (addr == 0xFF04) {
+        value = 0;
+    }
+
     mem[addr] = value;
 }
 

@@ -1,9 +1,11 @@
 #include "cpu.h"
+#include "debug.h"
 #include "emu.h"
 #include "instruction.h"
 #include "interrupt.h"
 #include "mem.h"
 #include "stack.h"
+#include "timer.h"
 #include "util.h"
 
 struct cpu_registers cpu_reg = {};
@@ -25,6 +27,9 @@ void cpu_init() {
     cpu_reg.h = 0x01;
     cpu_reg.l = 0x4D;
 
+    // LY register
+    mem[0xFF44] = 0x90;
+
     halted = false;
     interrupt_master_enabled = false;
 }
@@ -36,6 +41,9 @@ bool cpu_step() {
 
         // execute instruction
         op[opcode]();
+
+        // check for serial output from rom
+        debug_update();
 
         // handle interrupts (if current instruction is not ei)
         if (interrupt_master_enabled && opcode != 0xFB) {
@@ -56,6 +64,7 @@ bool cpu_step() {
 void cpu_cycle() {
     for (u8 i = 0; i < 4; i++) {
         ticks++;
+        timer_tick();
     }
 }
 
@@ -135,6 +144,10 @@ void cpu_handle_interrupts() {
         stack_push16(cpu_reg.pc);
         cpu_jump(ADDR_JOYPAD);
     }
+}
+
+void cpu_request_interrupt(u8 type) {
+    mem[0xFF0F] = bit_set(mem[0xFF0F], type);
 }
 
 u8 ie_register() {

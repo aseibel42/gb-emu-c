@@ -1,13 +1,8 @@
-#include "cpu.h"
-#include "debug.h"
-#include "mem.h"
+#include "emu.h"
 
 int main(int argc, char **argv) {
-    cpu_init();
-    mem_write(cpu_reg.pc, 0x41);
-    cpu_step();
-    mem_write(cpu_reg.pc, 0x80);
-    cpu_step();
-    debug_registers();
+
+    emu_run("rom/02-interrupts.gb");
+
     return 0;
 }

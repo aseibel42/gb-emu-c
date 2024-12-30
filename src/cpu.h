@@ -2,7 +2,7 @@
 
 #include "util.h"
 
-#define REG(a, f) union { struct { u8 a; u8 f; }; u16 a##f; };
+#define REG(a, f) union { struct { u8 f; u8 a; }; u16 a##f; };
 
 struct cpu_registers {
     u16 pc;
