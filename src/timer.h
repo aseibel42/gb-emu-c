@@ -2,7 +2,7 @@
 
 #include "util.h"
 
-extern u16 counter;
+extern u64 ticks;
 
 void timer_init();
 void timer_tick();

@@ -10,7 +10,6 @@
 // #include "ui.h"
 
 bool paused = false;
-u64 ticks = 0;
 
 static bool quit = false;
 
@@ -37,7 +36,7 @@ void *cpu_run(void *ptr) {
     timer_init();
     cpu_init();
     // while (!quit) {
-    for (int i = 0; i < 0x800000; i++) {
+    for (int i = 0; i < 0x100000; i++) {
         // debug_registers();
         fprintf(
             fp,
@@ -56,7 +55,6 @@ void *cpu_run(void *ptr) {
 void emu_run(char* rom_path) {
     load_cartridge(rom_path);
     // ui_init();
-    ticks = 0;
 
     // Run cpu instructions in separate thread
     pthread_t t1;

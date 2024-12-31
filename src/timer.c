@@ -3,16 +3,16 @@
 #include "mem.h"
 #include "util.h"
 
-u16 counter = 0;
+u64 ticks = 0;
 
 void timer_init() {
-    counter = 0xAC00;
-    u16_bytes bytes = u16_to_bytes(counter);
+    ticks = 0xAC00;
+    u16_bytes bytes = u16_to_bytes(ticks);
     timer_set_div(bytes.hi);
 }
 
 void timer_tick() {
-    counter++;
+    ticks++;
 
     u8 tac = timer_tac();
 
@@ -22,10 +22,10 @@ void timer_tick() {
     bool update_tima = tac & 0b100;
     u8 tac_mode = tac & 0xb11;
     update_tima &=
-        (tac_mode == 0b00) & !(counter & 0b111111111)
-        | (tac_mode == 0b01) & !(counter & 0b111)
-        | (tac_mode == 0b10) & !(counter & 0b11111)
-        | (tac_mode == 0b11) & !(counter & 0b1111111);
+        (tac_mode == 0b00) & !(ticks & 0b111111111)
+        | (tac_mode == 0b01) & !(ticks & 0b111)
+        | (tac_mode == 0b10) & !(ticks & 0b11111)
+        | (tac_mode == 0b11) & !(ticks & 0b1111111);
 
     u8 tima = timer_tima() + update_tima;
 

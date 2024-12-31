@@ -1,7 +1,7 @@
 #include "../src/cpu.h"
 #include "../src/debug.h"
-#include "../src/emu.h"
 #include "../src/mem.h"
+#include "../src/timer.h"
 #include "unity.h"
 #include "unity_internals.h"
 

@@ -1,6 +1,5 @@
 #include "cpu.h"
 #include "debug.h"
-#include "emu.h"
 #include "instruction.h"
 #include "interrupt.h"
 #include "mem.h"
@@ -63,7 +62,6 @@ bool cpu_step() {
 
 void cpu_cycle() {
     for (u8 i = 0; i < 4; i++) {
-        ticks++;
         timer_tick();
     }
 }
