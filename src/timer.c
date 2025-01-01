@@ -22,10 +22,10 @@ void timer_tick() {
     bool update_tima = tac & 0b100;
     u8 tac_mode = tac & 0xb11;
     update_tima &=
-        (tac_mode == 0b00) & !(ticks & 0b111111111)
-        | (tac_mode == 0b01) & !(ticks & 0b111)
-        | (tac_mode == 0b10) & !(ticks & 0b11111)
-        | (tac_mode == 0b11) & !(ticks & 0b1111111);
+        ((tac_mode == 0b00) & !(ticks & 0b111111111))
+        | ((tac_mode == 0b01) & !(ticks & 0b111))
+        | ((tac_mode == 0b10) & !(ticks & 0b11111))
+        | ((tac_mode == 0b11) & !(ticks & 0b1111111));
 
     u8 tima = timer_tima() + update_tima;
 

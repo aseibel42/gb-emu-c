@@ -1,5 +1,6 @@
 #include "cpu.h"
 #include "debug.h"
+#include "dma.h"
 #include "instruction.h"
 #include "interrupt.h"
 #include "mem.h"
@@ -64,6 +65,7 @@ void cpu_cycle() {
     for (u8 i = 0; i < 4; i++) {
         timer_tick();
     }
+    dma_tick();
 }
 
 u8 fetch() {
@@ -86,27 +88,16 @@ void cpu_jmpr(i8 x) {
     cpu_reg.pc += x;
 }
 
-bool flag_z() {
-    return bit_read(cpu_reg.f, 7);
-}
-
-bool flag_n() {
-    return bit_read(cpu_reg.f, 6);
-}
-
-bool flag_h() {
-    return bit_read(cpu_reg.f, 5);
-}
-
-bool flag_c() {
-    return bit_read(cpu_reg.f, 4);
-}
+bool flag_z() { return cpu_reg.flags.z; }
+bool flag_n() { return cpu_reg.flags.n; }
+bool flag_h() { return cpu_reg.flags.h; }
+bool flag_c() { return cpu_reg.flags.c; }
 
 void set_flags(i8 z, i8 n, i8 h, i8 c) {
-    if (z != -1) cpu_reg.f = bit_assign(cpu_reg.f, 7, z);
-    if (n != -1) cpu_reg.f = bit_assign(cpu_reg.f, 6, n);
-    if (h != -1) cpu_reg.f = bit_assign(cpu_reg.f, 5, h);
-    if (c != -1) cpu_reg.f = bit_assign(cpu_reg.f, 4, c);
+    if (z != -1) cpu_reg.flags.z = z;
+    if (n != -1) cpu_reg.flags.n = n;
+    if (h != -1) cpu_reg.flags.h = h;
+    if (c != -1) cpu_reg.flags.c = c;
 }
 
 bool interrupt_check(u8 interrupt_type) {

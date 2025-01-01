@@ -2,7 +2,7 @@
 
 int main(int argc, char **argv) {
 
-    emu_run("rom/02-interrupts.gb");
+    emu_run("rom/Tetris.gb");
 
     return 0;
 }

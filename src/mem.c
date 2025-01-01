@@ -1,4 +1,5 @@
 #include "cpu.h"
+#include "dma.h"
 #include "mem.h"
 
 /*
@@ -20,8 +21,22 @@
 
 u8 mem[0x10000] = {};
 
+// TODO: remove temporary hack
+static u8 ly = 0;
+
 u8 mem_read(u16 addr) {
     cpu_cycle();
+
+    // OAM is inaccessible during DMA
+    // NOTE: in real hardware, only HRAM is accessible
+    if (dma_active && addr >= 0xFE00 && addr < 0xFEA0) {
+        return 0xFF;
+    }
+
+    if (addr == 0xFF44) {
+        return ly++;
+    }
+
     return mem[addr];
 }
 
@@ -31,6 +46,17 @@ void mem_write(u16 addr, u8 value) {
     // Writing anything to DIV register resets it to 0.
     if (addr == 0xFF04) {
         value = 0;
+    }
+
+    // Writing anything to DMA register starts a OAM DMA transfer
+    else if (addr == 0xFF46) {
+        dma_start(value);
+    }
+
+    // OAM is inaccessible during DMA
+    // NOTE: in real hardware, only HRAM is accessible
+    if (dma_active && addr >= 0xFE00 && addr < 0xFEA0) {
+        return;
     }
 
     mem[addr] = value;

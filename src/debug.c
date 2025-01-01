@@ -5,7 +5,8 @@
 #include "mem.h"
 
 void debug_flags() {
-    printf("  ZNHC: %i%i%i%i\n", flag_z(), flag_n(), flag_h(), flag_h());
+    cpu_flags flags = cpu_reg.flags;
+    printf("  ZNHC: %i%i%i%i\n", flags.z, flags.n, flags.h, flags.c);
 }
 
 void debug_registers() {

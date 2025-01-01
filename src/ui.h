@@ -5,3 +5,4 @@
 
 void ui_init();
 void ui_handle_events();
+void ui_update_debug_window();

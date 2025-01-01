@@ -4,13 +4,32 @@
 
 #define REG(a, f) union { struct { u8 f; u8 a; }; u16 a##f; };
 
+typedef struct {
+    u8: 4; // padding
+    bool c : 1;
+    bool h : 1;
+    bool n : 1;
+    bool z : 1;
+}  cpu_flags;
+
 struct cpu_registers {
-    u16 pc;
-    u16 sp;
-    REG(a, f);
+    union {
+        struct {
+            union {
+                u8 f;
+                cpu_flags flags;
+            };
+            u8 a;
+        };
+        u16 af;
+    };
+
     REG(b, c);
     REG(d, e);
     REG(h, l);
+
+    u16 pc;
+    u16 sp;
 };
 
 extern struct cpu_registers cpu_reg;
