@@ -1,6 +1,18 @@
 #include <pthread.h>
 #include <stdio.h>
-#include <unistd.h>
+#include <time.h>
+
+#ifdef _WIN32
+    #include <windows.h>
+    void sleep_ms(int milliseconds) {
+        Sleep(milliseconds); // Windows Sleep uses milliseconds
+    }
+#else
+    #include <unistd.h>
+    void sleep_ms(int milliseconds) {
+        nanosleep(milliseconds * 1000000); // nanosleep uses nanoseconds
+    }
+#endif
 
 #include "cpu.h"
 #include "debug.h"
@@ -45,7 +57,7 @@ void *cpu_run(void *ptr) {
         //     mem[cpu_reg.pc], mem[cpu_reg.pc + 1], mem[cpu_reg.pc + 2], mem[cpu_reg.pc + 3]
         // );
         cpu_step();
-        usleep(100);
+        sleep_ms(1);
         // getchar();
     }
 
@@ -65,7 +77,7 @@ void emu_run(char* rom_path) {
     }
 
     while(!quit) {
-        usleep(6000);
+        sleep_ms(6);
         ui_handle_events();
         ui_update_debug_window();
     }

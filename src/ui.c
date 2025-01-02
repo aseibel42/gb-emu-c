@@ -52,9 +52,9 @@ void ui_init() {
         (32 * 8 * ui_scale) + (64 * ui_scale)
     );
 
-    int x, y;
-    SDL_GetWindowPosition(sdlWindow, &x, &y);
-    SDL_SetWindowPosition(sdlDebugWindow, x + SCREEN_WIDTH + 10, y);
+    // int x, y;
+    // SDL_GetWindowPosition(sdlWindow, &x, &y);
+    // SDL_SetWindowPosition(sdlDebugWindow, x + SCREEN_WIDTH + 10, y);
 }
 
 u32 debug_palette[4] = {0xFFFFFFFF, 0xFFAAAAAA, 0xFF555555, 0xFF000000};
@@ -122,9 +122,9 @@ void ui_update_debug_window() {
 void ui_handle_events() {
     SDL_Event e;
     while (SDL_PollEvent(&e) > 0) {
-        SDL_UpdateWindowSurface(sdlWindow);
+        // SDL_UpdateWindowSurface(sdlWindow);
         // SDL_UpdateWindowSurface(sdlTraceWindow);
-        // SDL_UpdateWindowSurface(sdlDebugWindow);
+        SDL_UpdateWindowSurface(sdlDebugWindow);
 
         if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_CLOSE) {
             emu_exit();

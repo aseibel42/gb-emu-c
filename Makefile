@@ -9,7 +9,7 @@ CC := gcc
 
 # Directories
 SRCDIR := ./src/
-INCDIR := ./include/
+# INCDIR := ./include/
 LIBDIR := ./lib/
 OBJDIR := ./obj/
 OUTDIR := ./bin/
@@ -23,8 +23,9 @@ EXE := emu
 
 # Flags, libraries, and includes
 CFLAGS := -Wall -Wextra -std=c11
-LDFLAGS := -L./lib
-LDLIBS := -lSDL2
+LDFLAGS := -L./lib/sdl2/lib
+LDLIBS := -lmingw32 -lSDL2main -lSDL2
+INCS := -I./lib/sdl2/include -I"\C:\msys64\mingw64\include"
 
 # Testing related
 TESTDIR := ./test/
@@ -51,7 +52,7 @@ $(OUTDIR)$(EXE): $(OBJS) | $(OUTDIR)
 
 # Compile
 $(OBJDIR)%$(OBJEXT): $(SRCDIR)%$(SRCEXT) | $(OBJDIR)
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(INCS) $(CFLAGS) -c $< -o $@
 
 # Remove built files
 clean:
