@@ -47,7 +47,11 @@ bool cpu_step() {
 
         // handle interrupts (if current instruction is not ei)
         if (interrupt_master_enabled && opcode != 0xFB) {
-            cpu_handle_interrupts();
+            u16 addr = cpu_handle_interrupts();
+            if (addr) {
+                stack_push16(cpu.reg.pc);
+                cpu_jump(addr);
+            }
         }
     } else {
         cpu_cycle();
@@ -95,15 +99,7 @@ void set_flags(i8 z, i8 n, i8 h, i8 c) {
     if (c != -1) cpu.flag.c = c;
 }
 
-static u16 interrupt_addr[5] = {
-    ADDR_VBLANK,
-    ADDR_LCD_STAT,
-    ADDR_TIMER,
-    ADDR_SERIAL,
-    ADDR_JOYPAD
-};
-
-u16 interrupt_check(u8 interrupt_type) {
+bool interrupt_check(u8 interrupt_type) {
     // An interrupt is executed only if enabled (IE) and requested (IF)
     bool interrupt_pending = bit_read(bus.ie_reg & bus.io.if_reg, interrupt_type);
 
@@ -112,23 +108,18 @@ u16 interrupt_check(u8 interrupt_type) {
         bus.io.if_reg = bit_clear(bus.io.if_reg, interrupt_type);
         halted = false;
         interrupt_master_enabled = false;
-        return interrupt_addr[interrupt_type];
     }
 
-    return 0;
+    return interrupt_pending;
 }
 
-void cpu_handle_interrupts() {
-    u16 addr = interrupt_check(INTERRUPT_VBLANK)
-        || interrupt_check(INTERRUPT_LCD_STAT)
-        || interrupt_check(INTERRUPT_TIMER)
-        || interrupt_check(INTERRUPT_SERIAL)
-        || interrupt_check(INTERRUPT_JOYPAD);
-
-    if (addr) {
-        stack_push16(cpu.reg.pc);
-        cpu_jump(addr);
-    }
+u16 cpu_handle_interrupts() {
+    if (interrupt_check(INTERRUPT_VBLANK)) return ADDR_VBLANK;
+    if (interrupt_check(INTERRUPT_LCD_STAT)) return ADDR_LCD_STAT;
+    if (interrupt_check(INTERRUPT_TIMER)) return ADDR_TIMER;
+    if (interrupt_check(INTERRUPT_SERIAL)) return ADDR_SERIAL;
+    if (interrupt_check(INTERRUPT_JOYPAD)) return ADDR_JOYPAD;
+    return 0;
 }
 
 void cpu_request_interrupt(u8 type) {

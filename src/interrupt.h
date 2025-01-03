@@ -15,5 +15,5 @@
 #define ADDR_SERIAL   0x58
 #define ADDR_JOYPAD   0x60
 
-void cpu_handle_interrupts();
+u16 cpu_handle_interrupts();
 void cpu_request_interrupt(u8 type);
