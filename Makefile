@@ -68,7 +68,7 @@ run: $(OUTDIR)$(EXE)
 
 # Run tests
 test-timings: $(TESTDIR)$(UNITY) $(TESTDIR)$(T_TIME)
-	$(CC) $(CFLAGS) $()src/cpu.c src/debug.c src/mem.c src/stack.c src/instruction.c src/instruction_table.c src/timer.c test/unity.c test/timings.c -o $(OUTDIR)test_timings
+	$(CC) $(CFLAGS) $()src/cpu.c src/debug.c src/dma.c src/mem.c src/stack.c src/instruction.c src/instruction_table.c src/timer.c test/unity.c test/timings.c -o $(OUTDIR)test_timings
 	$(OUTDIR)test_timings
 
 .PHONY: all clean run test-timings

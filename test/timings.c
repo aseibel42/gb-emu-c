@@ -339,7 +339,7 @@ void test_instruction() {
     TestCase tc = test_cases[code];
     sprintf(message, "(name: %s, code: 0x%02X)", tc.name, code);
 
-    mem[cpu_reg.pc] = code;
+    mem[cpu.reg.pc] = code;
     cpu_step();
 
     TEST_ASSERT_EQUAL_MESSAGE(tc.ticks_expected, ticks, message);
