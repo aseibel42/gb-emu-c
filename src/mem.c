@@ -19,7 +19,8 @@
     0xFFFF          : CPU Interrupt
 */
 
-u8 mem[0x10000] = {};
+struct bus bus = {};
+u8* mem = (u8*)&bus;
 
 // TODO: remove temporary hack
 static u8 ly = 0;

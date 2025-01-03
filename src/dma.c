@@ -6,14 +6,14 @@ bool dma_active = false;
 
 static u8 dma_delay = 0;
 static u8 dma_offset = 0;
-static u8 dma_source_addr = 0;
+static u16 dma_source_addr = 0;
 
 void dma_start(u8 source_addr) {
     printf("DMA START\n");
     dma_active = true;
     dma_delay = 1;
     dma_offset = 0;
-    dma_source_addr = source_addr;
+    dma_source_addr = source_addr << 8;
 }
 
 void dma_tick() {
@@ -27,9 +27,8 @@ void dma_tick() {
         return;
     }
 
-    u16 read_addr = ((u16)dma_source_addr << 8) + dma_offset;
-    u16 write_addr = 0xFE00 + dma_offset;
-    mem[write_addr] = mem[read_addr];
+    // Copy a single byte to Object Attribute Memory
+    bus.oam[dma_offset] = mem[dma_source_addr + dma_offset];
 
     dma_offset++;
 

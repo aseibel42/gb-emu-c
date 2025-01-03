@@ -10,7 +10,10 @@
 #else
     #include <unistd.h>
     void sleep_ms(int milliseconds) {
-        nanosleep(milliseconds * 1000000); // nanosleep uses nanoseconds
+        struct timespec ts;
+        ts.tv_sec = milliseconds / 1000;
+        ts.tv_nsec = (milliseconds % 1000) * 1000000;
+        nanosleep(&ts, 0); // nanosleep uses nanoseconds
     }
 #endif
 
@@ -53,8 +56,8 @@ void *cpu_run(void *ptr) {
         // fprintf(
         //     fp,
         //     "A:%02x F:%02x B:%02x C:%02x D:%02x E:%02x H:%02x L:%02x SP:%04x PC:%04x PCMEM:%02x,%02x,%02x,%02x\n",
-        //     cpu_reg.a, cpu_reg.f, cpu_reg.b, cpu_reg.c, cpu_reg.d, cpu_reg.e, cpu_reg.h, cpu_reg.l, cpu_reg.sp, cpu_reg.pc,
-        //     mem[cpu_reg.pc], mem[cpu_reg.pc + 1], mem[cpu_reg.pc + 2], mem[cpu_reg.pc + 3]
+        //     cpu.reg.a, cpu.reg.f, cpu.reg.b, cpu.reg.c, cpu.reg.d, cpu.reg.e, cpu.reg.h, cpu.reg.l, cpu.reg.sp, cpu.reg.pc,
+        //     mem[cpu.reg.pc], mem[cpu.reg.pc + 1], mem[cpu.reg.pc + 2], mem[cpu.reg.pc + 3]
         // );
         cpu_step();
         sleep_ms(1);
@@ -77,7 +80,7 @@ void emu_run(char* rom_path) {
     }
 
     while(!quit) {
-        sleep_ms(6);
+        sleep_ms(10);
         ui_handle_events();
         ui_update_debug_window();
     }

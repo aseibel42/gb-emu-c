@@ -3,11 +3,11 @@
 #include "stack.h"
 
 void stack_push(u8 data) {
-    mem_write(--cpu_reg.sp, data);
+    mem_write(--cpu.reg.sp, data);
 }
 
 u8 stack_pop() {
-    return mem_read(cpu_reg.sp++);
+    return mem_read(cpu.reg.sp++);
 }
 
 void stack_push16(u16 data) {

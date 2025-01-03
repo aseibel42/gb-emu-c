@@ -8,27 +8,27 @@
 #include "timer.h"
 #include "util.h"
 
-struct cpu_registers cpu_reg = {};
+union cpu cpu = {};
 bool interrupt_master_enabled = false;
 bool halted = false;
 bool stopped = false;
 
 void cpu_init() {
-    cpu_reg.pc = 0x0100;
-    cpu_reg.sp = 0xFFFE;
+    cpu.reg.pc = 0x0100;
+    cpu.reg.sp = 0xFFFE;
 
     // TODO: initial state of CPU registers depends on type of GB
-    cpu_reg.a = 0x01;
-    cpu_reg.f = 0xB0;
-    cpu_reg.b = 0x00;
-    cpu_reg.c = 0x13;
-    cpu_reg.d = 0x00;
-    cpu_reg.e = 0xD8;
-    cpu_reg.h = 0x01;
-    cpu_reg.l = 0x4D;
+    cpu.reg.a = 0x01;
+    cpu.reg.f = 0xB0;
+    cpu.reg.b = 0x00;
+    cpu.reg.c = 0x13;
+    cpu.reg.d = 0x00;
+    cpu.reg.e = 0xD8;
+    cpu.reg.h = 0x01;
+    cpu.reg.l = 0x4D;
 
     // LY register
-    mem[0xFF44] = 0x90;
+    bus.io.lcd_y = 0x90;
 
     halted = false;
     interrupt_master_enabled = false;
@@ -53,7 +53,7 @@ bool cpu_step() {
         cpu_cycle();
 
         // resume if there is an interrupt pending
-        if (ie_register() & if_register()) {
+        if (bus.ie_reg & bus.io.if_reg) {
             halted = false;
         }
     }
@@ -69,7 +69,7 @@ void cpu_cycle() {
 }
 
 u8 fetch() {
-    return mem_read(cpu_reg.pc++);
+    return mem_read(cpu.reg.pc++);
 }
 
 u16 fetch16() {
@@ -80,69 +80,57 @@ u16 fetch16() {
 
 void cpu_jump(u16 addr) {
     cpu_cycle();
-    cpu_reg.pc = addr;
+    cpu.reg.pc = addr;
 }
 
 void cpu_jmpr(i8 x) {
     cpu_cycle();
-    cpu_reg.pc += x;
+    cpu.reg.pc += x;
 }
-
-bool flag_z() { return cpu_reg.flags.z; }
-bool flag_n() { return cpu_reg.flags.n; }
-bool flag_h() { return cpu_reg.flags.h; }
-bool flag_c() { return cpu_reg.flags.c; }
 
 void set_flags(i8 z, i8 n, i8 h, i8 c) {
-    if (z != -1) cpu_reg.flags.z = z;
-    if (n != -1) cpu_reg.flags.n = n;
-    if (h != -1) cpu_reg.flags.h = h;
-    if (c != -1) cpu_reg.flags.c = c;
+    if (z != -1) cpu.flag.z = z;
+    if (n != -1) cpu.flag.n = n;
+    if (h != -1) cpu.flag.h = h;
+    if (c != -1) cpu.flag.c = c;
 }
 
-bool interrupt_check(u8 interrupt_type) {
+static u16 interrupt_addr[5] = {
+    ADDR_VBLANK,
+    ADDR_LCD_STAT,
+    ADDR_TIMER,
+    ADDR_SERIAL,
+    ADDR_JOYPAD
+};
+
+u16 interrupt_check(u8 interrupt_type) {
     // An interrupt is executed only if enabled (IE) and requested (IF)
-    bool interrupt_pending = true;
-    interrupt_pending &= bit_read(ie_register(), interrupt_type); // IE register
-    interrupt_pending &= bit_read(if_register(), interrupt_type); // IF register
+    bool interrupt_pending = bit_read(bus.ie_reg & bus.io.if_reg, interrupt_type);
 
     if (interrupt_pending) {
         // acknowledge interrupt by clearing corresponding bit in IF register
-        mem[0xFF0F] = bit_clear(mem[0xFF0F], interrupt_type);
+        bus.io.if_reg = bit_clear(bus.io.if_reg, interrupt_type);
         halted = false;
         interrupt_master_enabled = false;
+        return interrupt_addr[interrupt_type];
     }
 
-    return interrupt_pending;
+    return 0;
 }
 
 void cpu_handle_interrupts() {
-    if (interrupt_check(INTERRUPT_VBLANK)) {
-        stack_push16(cpu_reg.pc);
-        cpu_jump(ADDR_VBLANK);
-    } else if (interrupt_check(INTERRUPT_LCD_STAT)) {
-        stack_push16(cpu_reg.pc);
-        cpu_jump(ADDR_LCD_STAT);
-    } else if (interrupt_check(INTERRUPT_TIMER)) {
-        stack_push16(cpu_reg.pc);
-        cpu_jump(ADDR_TIMER);
-    } else if (interrupt_check(INTERRUPT_SERIAL)) {
-        stack_push16(cpu_reg.pc);
-        cpu_jump(ADDR_SERIAL);
-    } else if (interrupt_check(INTERRUPT_JOYPAD)) {
-        stack_push16(cpu_reg.pc);
-        cpu_jump(ADDR_JOYPAD);
+    u16 addr = interrupt_check(INTERRUPT_VBLANK)
+        || interrupt_check(INTERRUPT_LCD_STAT)
+        || interrupt_check(INTERRUPT_TIMER)
+        || interrupt_check(INTERRUPT_SERIAL)
+        || interrupt_check(INTERRUPT_JOYPAD);
+
+    if (addr) {
+        stack_push16(cpu.reg.pc);
+        cpu_jump(addr);
     }
 }
 
 void cpu_request_interrupt(u8 type) {
-    mem[0xFF0F] = bit_set(mem[0xFF0F], type);
-}
-
-u8 ie_register() {
-    return mem[0xFFFF];
-}
-
-u8 if_register() {
-    return mem[0xFF0F];
+    bus.io.if_reg = bit_set(bus.io.if_reg, type);
 }
