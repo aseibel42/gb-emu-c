@@ -21,6 +21,7 @@
 #include "debug.h"
 #include "emu.h"
 #include "mem.h"
+#include "ppu.h"
 #include "timer.h"
 #include "ui.h"
 
@@ -50,6 +51,7 @@ void *cpu_run(void *ptr) {
 
     timer_init();
     cpu_init();
+    ppu_init();
     // while (!quit) {
     for (int i = 0; i < 0x400000; i++) {
         // debug_registers();

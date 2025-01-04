@@ -2,6 +2,14 @@
 
 #include "util.h"
 
+#define LINES_PER_FRAME 154
+#define DOTS_PER_LINE 456
+
+#define PPU_MODE_OAM 0
+#define PPU_MODE_XFER 1
+#define PPU_MODE_VBLANK 2
+#define PPU_MODE_HBLANK 3
+
 #define Y_RESOLUTION 144
 #define X_RESOLUTION 160
 

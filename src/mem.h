@@ -1,5 +1,6 @@
 #pragma once
 
+#include "lcd.h"
 #include "util.h"
 
 struct io {
@@ -28,8 +29,8 @@ struct io {
     u8 wave[0x10]; // 0xFF30
 
     // lcd
-    u8 lcd_control; // 0xFF40
-    u8 lcd_stat; // 0xFF41
+    struct lcd_control lcd_control; // 0xFF40
+    struct lcd_stat lcd_stat; // 0xFF41
     u8 lcd_scroll_y; // 0xFF42
     u8 lcd_scroll_x; // 0xFF43
     u8 lcd_y; // 0xFF44
