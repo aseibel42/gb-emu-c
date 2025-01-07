@@ -35,3 +35,5 @@ void ppu_mode_oam();
 void ppu_mode_xfer();
 void ppu_mode_vblank();
 void ppu_mode_hblank();
+
+void fill_ppu_buffer(u16 scanline);

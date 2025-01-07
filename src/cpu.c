@@ -68,6 +68,7 @@ bool cpu_step() {
 void cpu_cycle() {
     for (u8 i = 0; i < 4; i++) {
         timer_tick();
+        ppu_tick();
     }
     dma_tick();
 }

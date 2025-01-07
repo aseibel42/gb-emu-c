@@ -26,6 +26,7 @@
 #include "ui.h"
 
 bool paused = false;
+extern u32* ppu_buffer;
 
 static bool quit = false;
 
@@ -52,6 +53,7 @@ void *cpu_run(void *ptr) {
     timer_init();
     cpu_init();
     ppu_init();
+    sleep_ms(1000);
     // while (!quit) {
     for (int i = 0; i < 0x400000; i++) {
         // debug_registers();
@@ -62,11 +64,10 @@ void *cpu_run(void *ptr) {
         //     mem[cpu.reg.pc], mem[cpu.reg.pc + 1], mem[cpu.reg.pc + 2], mem[cpu.reg.pc + 3]
         // );
         cpu_step();
-        sleep_ms(1);
+        // sleep_ms(1);
         // getchar();
     }
-
-    quit = true;
+    // quit = true;
     return ptr;
 }
 
@@ -82,9 +83,10 @@ void emu_run(char* rom_path) {
     }
 
     while(!quit) {
-        sleep_ms(10);
+        sleep_ms(100);
         ui_handle_events();
         ui_update_debug_window();
+        ui_update_tilemap_window();
     }
 }
 
