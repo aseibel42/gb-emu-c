@@ -2,7 +2,7 @@
 
 #include "util.h"
 
-extern bool paused;
+#define CPU_SPEED 1
 
 void emu_run(char* rom_path);
 void emu_cycle();

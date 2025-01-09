@@ -10,9 +10,6 @@
 #define PPU_MODE_VBLANK 2
 #define PPU_MODE_HBLANK 3
 
-#define Y_RESOLUTION 144
-#define X_RESOLUTION 160
-
 typedef struct {
     u8 y_pos;
     u8 x_pos;
@@ -30,8 +27,3 @@ extern obj_attr* oam_mem;
 
 void ppu_init();
 void ppu_tick();
-
-void ppu_mode_oam();
-void ppu_mode_xfer();
-void ppu_mode_vblank();
-void ppu_mode_hblank();

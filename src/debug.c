@@ -11,7 +11,7 @@ void debug_flags() {
 
 void debug_registers() {
     for (uint8_t i = 0; i < 8; i++) {
-        printf("%02x ", mem_read(cpu.reg.pc + i));
+        printf("%02x ", mem[cpu.reg.pc + i]);
     }
     printf("  %-12s", op_name[mem[cpu.reg.pc]]);
     printf("  $SP: %04x  $PC: %04x", cpu.reg.sp, cpu.reg.pc);

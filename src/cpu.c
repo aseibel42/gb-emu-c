@@ -4,6 +4,7 @@
 #include "instruction.h"
 #include "interrupt.h"
 #include "mem.h"
+#include "ppu.h"
 #include "stack.h"
 #include "timer.h"
 #include "util.h"
@@ -32,9 +33,24 @@ void cpu_init() {
 
     halted = false;
     interrupt_master_enabled = false;
+
+    // Setup log file (gameboy doctor)
+    // FILE *fp = fopen("log/cpu_instrs_02.txt", "w");
+    // if (!fp) {
+    //     printf("Failed to open file\n");
+    //     return ptr;
+    // }
 }
 
 bool cpu_step() {
+    // (gameboy doctor):
+    // fprintf(
+    //     fp,
+    //     "A:%02x F:%02x B:%02x C:%02x D:%02x E:%02x H:%02x L:%02x SP:%04x PC:%04x PCMEM:%02x,%02x,%02x,%02x\n",
+    //     cpu.reg.a, cpu.reg.f, cpu.reg.b, cpu.reg.c, cpu.reg.d, cpu.reg.e, cpu.reg.h, cpu.reg.l, cpu.reg.sp, cpu.reg.pc,
+    //     mem[cpu.reg.pc], mem[cpu.reg.pc + 1], mem[cpu.reg.pc + 2], mem[cpu.reg.pc + 3]
+    // );
+
     if (!halted) {
         // fetch instruction
         u8 opcode = fetch();
@@ -68,6 +84,7 @@ bool cpu_step() {
 void cpu_cycle() {
     for (u8 i = 0; i < 4; i++) {
         timer_tick();
+        ppu_tick();
     }
     dma_tick();
 }

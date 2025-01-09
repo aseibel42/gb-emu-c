@@ -23,8 +23,8 @@ void lcd_init() {
     // LCD Stat
     bus.io.lcd_stat.ppu_mode = PPU_MODE_OAM;
 
-    bus.io.lcd_scroll_x = 0;
-    bus.io.lcd_scroll_y = 0;
+    bus.io.scroll_x = 0;
+    bus.io.scroll_y = 0;
     bus.io.lcd_y = 0;
     bus.io.lcd_y_compare = 0;
     bus.io.bg_palette = 0xFC;

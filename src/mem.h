@@ -31,8 +31,8 @@ struct io {
     // lcd
     struct lcd_control lcd_control; // 0xFF40
     struct lcd_stat lcd_stat; // 0xFF41
-    u8 lcd_scroll_y; // 0xFF42
-    u8 lcd_scroll_x; // 0xFF43
+    u8 scroll_y; // 0xFF42
+    u8 scroll_x; // 0xFF43
     u8 lcd_y; // 0xFF44
     u8 lcd_y_compare; // 0xFF45
     u8 dma; // 0xFF46
