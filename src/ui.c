@@ -22,7 +22,6 @@ SDL_Renderer *sdlTilemapRenderer;
 SDL_Texture *sdlTilemapTexture;
 SDL_Surface *tilemapScreen;
 
-extern u32* ppu_buffer;
 
 static int ui_scale = 2;
 
@@ -31,8 +30,6 @@ void ui_init() {
     printf("SDL INIT\n");
 
     // SDL_CreateWindowAndRenderer(SCREEN_WIDTH, SCREEN_HEIGHT, 0, &sdlDebugWindow, &sdlDebugRenderer);
-
-    
 
     // Debug window
     SDL_CreateWindowAndRenderer(
@@ -138,8 +135,8 @@ void display_tile(SDL_Surface *surface, u16 startLocation, u16 tileNum, int x, i
     SDL_Rect rc;
 
     for (int tileY=0; tileY<16; tileY += 2) {
-        u8 b1 = mem_read(startLocation + (tileNum * 16) + tileY);
-        u8 b2 = mem_read(startLocation + (tileNum * 16) + tileY + 1);
+        u8 b1 = mem[startLocation + (tileNum * 16) + tileY];
+        u8 b2 = mem[startLocation + (tileNum * 16) + tileY + 1];
 
         for (int bit=7; bit >= 0; bit--) {
             u8 hi = !!(b1 & (1 << bit)) << 1;
@@ -213,7 +210,7 @@ void ui_update_tilemap_window() {
     //tilemap, 32 x 32 (1024) tiles, bytes at 0x9800-9BFF represent ids of tiles (256 total) in mem 0x8000-8FFF
     for (int y=0; y<32; y++) {
         for (int x=0; x<32; x++) {
-            tileNum = mem_read(tilemapStartAddr + 32 * y + x);
+            tileNum = mem[tilemapStartAddr + 32 * y + x];
             display_tile(
                 tilemapScreen,
                 addr,
@@ -234,7 +231,6 @@ void ui_update_tilemap_window() {
 	SDL_RenderPresent(sdlTilemapRenderer);
 }
 
-//
 void ui_update_window() {
     SDL_Rect rc;
     rc.x = 0;
@@ -248,7 +244,19 @@ void ui_update_window() {
     // for each scanline
     for(u8 scanline=0; scanline<144; scanline++) {
         for(u8 tile=0; tile<21; tile++) {
-            u32 pixel_data = ppu_buffer[scanline*21 + tile];
+            u16 value = (u16)scanline*21 + tile;
+            u32 pixel_data = 0;
+            // Sometimes (esp. when there are no sleeps) pixel_info_buffer is accessed before being created
+            // This ensures that is created before accessing
+            if(pixel_info_buffer) {
+                pixel_data = pixel_info_buffer[value];
+            }
+            else {
+                printf("no pixel buffer --------------\n");
+            }
+
+            
+
             // printf("pixel_data: %x\n",pixel_data);
 
             // Extract pixel data into color and src info

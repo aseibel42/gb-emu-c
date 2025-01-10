@@ -26,7 +26,7 @@
 #include "ui.h"
 
 bool paused = false;
-extern u32* ppu_buffer;
+extern u32* pixel_info_buffer;
 
 static bool quit = false;
 
@@ -53,9 +53,10 @@ void *cpu_run(void *ptr) {
     timer_init();
     cpu_init();
     ppu_init();
-    sleep_ms(1000);
+    // sleep_ms(10);
+
     // while (!quit) {
-    for (int i = 0; i < 0x400000; i++) {
+    for (int i = 0; i < 0x400000; i++) { 
         // debug_registers();
         // fprintf(
         //     fp,
@@ -83,8 +84,9 @@ void emu_run(char* rom_path) {
     }
 
     while(!quit) {
-        sleep_ms(100);
+        // sleep_ms(10);
         ui_handle_events();
+        ui_update_window();
         ui_update_debug_window();
         ui_update_tilemap_window();
     }

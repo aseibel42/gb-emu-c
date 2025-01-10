@@ -22,9 +22,6 @@
 struct bus bus = {};
 u8* mem = (u8*)&bus;
 
-// TODO: remove temporary hack
-static u8 ly = 0;
-
 u8 mem_read(u16 addr) {
     cpu_cycle();
 
@@ -32,10 +29,6 @@ u8 mem_read(u16 addr) {
     // NOTE: in real hardware, only HRAM is accessible
     if (dma_active && addr >= 0xFE00 && addr < 0xFEA0) {
         return 0xFF;
-    }
-
-    if (addr == 0xFF44) {
-        return ly++;
     }
 
     return mem[addr];

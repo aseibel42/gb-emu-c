@@ -27,6 +27,7 @@ typedef struct {
 } obj_attr;
 
 extern obj_attr* oam_mem;
+extern u32* pixel_info_buffer;
 
 void ppu_init();
 void ppu_tick();
@@ -36,4 +37,4 @@ void ppu_mode_xfer();
 void ppu_mode_vblank();
 void ppu_mode_hblank();
 
-void fill_ppu_buffer(u16 scanline);
+void fill_ppu_buffer();
