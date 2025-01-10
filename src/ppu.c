@@ -32,7 +32,7 @@ void ppu_init() {
 void ppu_draw_line() {
     // getchar();
     if (bus.io.lcd_y >= Y_RESOLUTION) {
-        printf("SCANLINE Y > 160 (THIS SHOULD NEVER HAPPEN!)\n");
+        printf("SCANLINE Y = %d (THIS SHOULD NEVER HAPPEN!)\n", bus.io.lcd_y);
         return;
     }
 
@@ -69,11 +69,11 @@ void ppu_draw_line() {
         u8 tile_src_msb = 0;
 
         // pack into u32
-        uint32_t packed =
-            ((uint32_t)tile_src_msb << 24)
-            | ((uint32_t)tile_src_lsb << 16)
-            | ((uint32_t)tile_color_msb << 8)
-            | ((uint32_t)tile_color_lsb);
+        u32 packed =
+            ((u32)tile_src_msb << 24)
+            | ((u32)tile_src_lsb << 16)
+            | ((u32)tile_color_msb << 8)
+            | ((u32)tile_color_lsb);
 
         pixel_info[t] = packed;
     }

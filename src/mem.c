@@ -19,7 +19,7 @@
     0xFFFF          : CPU Interrupt
 */
 
-struct bus bus = {};
+struct bus bus = {0};
 u8* mem = (u8*)&bus;
 
 u8 mem_read(u16 addr) {

@@ -9,7 +9,7 @@
 #include "timer.h"
 #include "util.h"
 
-union cpu cpu = {};
+union cpu cpu = {0};
 bool interrupt_master_enabled = false;
 bool halted = false;
 bool stopped = false;
@@ -27,9 +27,6 @@ void cpu_init() {
     cpu.reg.e = 0xD8;
     cpu.reg.h = 0x01;
     cpu.reg.l = 0x4D;
-
-    // LY register
-    bus.io.lcd_y = 0x90;
 
     halted = false;
     interrupt_master_enabled = false;
