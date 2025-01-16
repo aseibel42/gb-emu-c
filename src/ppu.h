@@ -10,6 +10,10 @@
 #define PPU_MODE_VBLANK 2
 #define PPU_MODE_HBLANK 3
 
+#define BG_PALETTE 0
+#define OBJ_PALETTE_0 1
+#define OBJ_PALETTE_1 2
+
 typedef struct {
     u8 y_pos;
     u8 x_pos;
@@ -22,6 +26,11 @@ typedef struct {
     u8 y_flip : 1;
     u8 priority : 1;
 } obj_attr;
+
+typedef struct {
+    u8 color;
+    u8 src;
+} pix_row_info;
 
 extern obj_attr* oam_mem;
 extern u32 debug_palette[4];
