@@ -10,6 +10,10 @@
 #define PPU_MODE_VBLANK 2
 #define PPU_MODE_HBLANK 3
 
+#define BG_PALETTE 0
+#define OBJ_PALETTE_0 1
+#define OBJ_PALETTE_1 2
+
 typedef struct {
     u8 y_pos;
     u8 x_pos;

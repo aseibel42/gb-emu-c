@@ -9,7 +9,7 @@ CC := gcc
 
 # Directories
 SRCDIR := ./src/
-# INCDIR := ./include/
+INCDIR := ./include/
 LIBDIR := ./lib/
 OBJDIR := ./obj/
 OUTDIR := ./bin/
@@ -22,10 +22,9 @@ OBJEXT := .o
 EXE := emu
 
 # Flags, libraries, and includes
-CFLAGS := -Wall -Wextra -std=c11
-LDFLAGS := -L./lib/sdl2/lib
-LDLIBS := -lmingw32 -lSDL2main -lSDL2
-INCS := -I./lib/sdl2/include -I"\C:\msys64\mingw64\include"
+CFLAGS := -Wall -Wextra -std=c11 -O0 -g
+LDFLAGS := -L./lib
+LDLIBS := -lSDL2
 
 # Testing related
 TESTDIR := ./test/
@@ -52,7 +51,7 @@ $(OUTDIR)$(EXE): $(OBJS) | $(OUTDIR)
 
 # Compile
 $(OBJDIR)%$(OBJEXT): $(SRCDIR)%$(SRCEXT) | $(OBJDIR)
-	$(CC) $(INCS) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 # Remove built files
 clean:
@@ -66,9 +65,13 @@ $(OUTDIR) $(OBJDIR):
 run: $(OUTDIR)$(EXE)
 	@$<
 
+# Run the executable under valgrind (memcheck)
+check: $(OUTDIR)$(EXE)
+	@valgrind --leak-check=yes $<
+
 # Run tests
 test-timings: $(TESTDIR)$(UNITY) $(TESTDIR)$(T_TIME)
 	$(CC) $(CFLAGS) $()src/cpu.c src/debug.c src/dma.c src/mem.c src/stack.c src/instruction.c src/instruction_table.c src/timer.c test/unity.c test/timings.c -o $(OUTDIR)test_timings
 	$(OUTDIR)test_timings
 
-.PHONY: all clean run test-timings
+.PHONY: all clean run test-timings check

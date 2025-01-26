@@ -49,6 +49,7 @@ void* cpu_process(void* ptr) {
         while (bus.io.lcd_stat.ppu_mode != PPU_MODE_VBLANK) {
             cpu_step();
         }
+        printf("VBLANK START (TICKS: %d)\n", ticks);
 
         // Signal that CPU is finished with this frame
         frames++;
