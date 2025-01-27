@@ -2,13 +2,9 @@
 #include <string.h>
 
 #include "interrupt.h"
-#include "lcd.h"
 #include "mem.h"
 #include "ppu.h"
 #include "ui.h"
-#include "util.h"
-
-#define REVERSE(x) x = ((x * 0x0802LU & 0x22110LU) | (x * 0x8020LU & 0x88440LU)) * 0x10101LU >> 16;
 
 typedef struct {
     u8 index;
@@ -25,12 +21,44 @@ static sprite_info line_sprites[10];
 static u8 win_y = 0;
 static bool win_test_y = false;
 
-u32 dmg_palette[4] = {0xFFFFFFFF, 0xFFAAAAAA, 0xFF555555, 0xFF000000};
+static u32 dmg_palette[4] = {0xFFFFFFFF, 0xFFAAAAAA, 0xFF555555, 0xFF000000};
+
+static inline void blend(u8* dest, u8 value, u8 mask) {
+    *dest &= ~mask;
+    *dest |= value & mask;
+}
+
+static inline void reverse_bits(u8* x) {
+    *x = ((*x * 0x0802LU & 0x22110LU) | (*x * 0x8020LU & 0x88440LU)) * 0x10101LU >> 16;
+}
 
 void ppu_init() {
     ppu_frame = 0;
     ppu_dots = 0;
-    lcd_init();
+
+    // LCD Control
+    bus.io.lcd_control.bgw_enable = 1;
+    bus.io.lcd_control.obj_enable = 0;
+    bus.io.lcd_control.obj_height = 0;
+    bus.io.lcd_control.bg_tile_map = 0;
+    bus.io.lcd_control.bgw_tiles = 1;
+    bus.io.lcd_control.win_enable = 0;
+    bus.io.lcd_control.win_tile_map = 0;
+    bus.io.lcd_control.lcd_enable = 1;
+
+    // LCD Stat
+    bus.io.lcd_stat.ppu_mode = PPU_MODE_OAM;
+
+    // PPU Registers
+    bus.io.scroll_x = 0;
+    bus.io.scroll_y = 0;
+    bus.io.lcd_y = 0;
+    bus.io.lcd_y_compare = 0;
+    bus.io.bg_palette = 0xFC;
+    bus.io.obj_palette[0] = 0xFF;
+    bus.io.obj_palette[1] = 0xFF;
+    bus.io.win_y = 0;
+    bus.io.win_x = 0;
 }
 
 void sort_net_10(u16 a[]) {
@@ -87,10 +115,10 @@ void ppu_draw_line() {
 
     // Store info for one scanline of pixels (2-bit color index + 2-bit palette).
     // A scanline covers 20 tiles.
-    u8 color_0[20] = {0};
-    u8 color_1[20] = {0};
-    u8 source_0[20] = {0};
-    u8 source_1[20] = {0};
+    u8 color_0[TILES_PER_LINE] = {0};
+    u8 color_1[TILES_PER_LINE] = {0};
+    u8 source_0[TILES_PER_LINE] = {0};
+    u8 source_1[TILES_PER_LINE] = {0};
 
     // skip bg and window if not enabled
     if (bus.io.lcd_control.bgw_enable) {
@@ -111,7 +139,7 @@ void ppu_draw_line() {
         if (bg_offset_x) {
             u16_bytes mask_bytes = u16_to_bytes(0xFF << bg_offset_x);
 
-            for (u8 t = 0; t < 21; t++) {
+            for (u8 t = 0; t < TILES_PER_LINE+1; t++) {
                 u8 tile_x = (bg_start_x + t) & 31;
                 u8 tile_id = mem[bg_tile_map_addr + tile_x] + tile_addr_mode;
                 u16 row_addr = bg_tile_data_addr + 16*tile_id;
@@ -119,17 +147,17 @@ void ppu_draw_line() {
                 u8 color_msb = mem[row_addr + 1];
 
                 if (t > 0) {
-                    color_0[t-1] |= (color_lsb >> (8 - bg_offset_x)) & mask_bytes.hi;
-                    color_1[t-1] |= (color_msb >> (8 - bg_offset_x)) & mask_bytes.hi;
+                    blend(&color_0[t-1], color_lsb >> (8 - bg_offset_x), mask_bytes.hi);
+                    blend(&color_1[t-1], color_msb >> (8 - bg_offset_x), mask_bytes.hi);
                 }
 
-                if (t < 20) {
-                    color_0[t] |= (color_lsb << bg_offset_x) & mask_bytes.lo;
-                    color_1[t] |= (color_msb << bg_offset_x) & mask_bytes.lo;
+                if (t < TILES_PER_LINE) {
+                    blend(&color_0[t], color_lsb << bg_offset_x, mask_bytes.lo);
+                    blend(&color_1[t], color_msb << bg_offset_x, mask_bytes.lo);
                 }
             }
         } else {
-            for (u8 t = 0; t < 20; t++) {
+            for (u8 t = 0; t < TILES_PER_LINE; t++) {
                 u8 tile_x = (bg_start_x + t) & 31;
                 u8 tile_id = mem[bg_tile_map_addr + tile_x] + tile_addr_mode;
                 u16 row_addr = bg_tile_data_addr + 16*tile_id;
@@ -151,28 +179,24 @@ void ppu_draw_line() {
             if (win_offset_x) {
                 u16_bytes mask_bytes = u16_to_bytes(0xFF << (8 - win_offset_x));
 
-                for (u8 t = 0; t < 21 - win_start_x; t++) {
+                for (u8 t = 0; t < TILES_PER_LINE+1 - win_start_x; t++) {
                     u8 tile_id = mem[win_tile_map_addr + t] + tile_addr_mode;
                     u16 row_addr = win_tile_data_addr + 16*tile_id;
                     u8 color_lsb = mem[row_addr];
                     u8 color_msb = mem[row_addr + 1];
 
                     if (win_start_x + t > 0) {
-                        color_0[win_start_x + t-1] &= ~mask_bytes.hi;
-                        color_1[win_start_x + t-1] &= ~mask_bytes.hi;
-                        color_0[win_start_x + t-1] |= (color_lsb >> win_offset_x) & mask_bytes.hi;
-                        color_1[win_start_x + t-1] |= (color_msb >> win_offset_x) & mask_bytes.hi;
+                        blend(&color_0[win_start_x + t-1], color_lsb >> win_offset_x, mask_bytes.hi);
+                        blend(&color_1[win_start_x + t-1], color_msb >> win_offset_x, mask_bytes.hi);
                     }
 
-                    if (win_start_x + t < 20) {
-                        color_0[win_start_x + t] &= ~mask_bytes.lo;
-                        color_1[win_start_x + t] &= ~mask_bytes.lo;
-                        color_0[win_start_x + t] |= (color_lsb << (8 - win_offset_x)) & mask_bytes.lo;
-                        color_1[win_start_x + t] |= (color_msb << (8 - win_offset_x)) & mask_bytes.lo;
+                    if (win_start_x + t < TILES_PER_LINE) {
+                        blend(&color_0[win_start_x + t], color_lsb << (8 - win_offset_x), mask_bytes.lo);
+                        blend(&color_1[win_start_x + t], color_msb << (8 - win_offset_x), mask_bytes.lo);
                     }
                 }
             } else {
-                for (u8 t = 0; t < 20-win_start_x; t++) {
+                for (u8 t = 0; t < TILES_PER_LINE-win_start_x; t++) {
                     u8 tile_id = mem[win_tile_map_addr + t] + tile_addr_mode;
                     u16 row_addr = win_tile_data_addr + 16*tile_id;
                     color_0[win_start_x + t] = mem[row_addr];
@@ -181,7 +205,7 @@ void ppu_draw_line() {
             }
         }
     } else {
-        for (int t = 0; t < 20; t++) {
+        for (int t = 0; t < TILES_PER_LINE; t++) {
             color_0[t] = 0;
             color_1[t] = 0;
         }
@@ -195,15 +219,14 @@ void ppu_draw_line() {
             // skip off-screen objects
             if (info.x_pos >= 168) continue;
 
+            obj_attr sprite = ((obj_attr*)bus.oam)[info.index];
+
             i8 obj_tile_x = (info.x_pos - 8) / 8;
             u8 obj_offset_x = info.x_pos & 7;
 
-            obj_attr sprite = ((obj_attr*)bus.oam)[info.index];
-
             u8 obj_row_y = bus.io.lcd_y + 16 - sprite.y_pos;
-            if (sprite.y_flip) {
-                obj_row_y = (8 << bus.io.lcd_control.obj_height) - obj_row_y - 1;
-            }
+            obj_row_y ^= -sprite.y_flip;
+            obj_row_y &= (bus.io.lcd_control.obj_height << 3) | 0b111;
 
             // remove last bit for 2-tile sprites
             u8 tile_id = sprite.tile & ~bus.io.lcd_control.obj_height;
@@ -211,66 +234,47 @@ void ppu_draw_line() {
             u16 row_addr = 0x8000 + 16*tile_id + 2*obj_row_y;
             u8 color_lsb = mem[row_addr];
             u8 color_msb = mem[row_addr + 1];
-            u8 source_lsb = sprite.dmg_palette ? 0 : 0xFF;
-            u8 source_msb = sprite.dmg_palette ? 0xFF : 0;
+            u8 source_msb = -sprite.dmg_palette;
+            u8 source_lsb = ~source_msb;
 
             if (sprite.x_flip) {
-                REVERSE(color_lsb);
-                REVERSE(color_msb);
+                reverse_bits(&color_lsb);
+                reverse_bits(&color_msb);
             }
 
-            if (obj_offset_x) {
-                // transparency and background priority
-                u8 mask = sprite.priority
-                    ? ~(color_0[obj_tile_x] | color_1[obj_tile_x])
-                    : color_lsb | color_msb;
+            // transparency and background priority
+            u8 mask = sprite.priority
+                ? ~(color_0[obj_tile_x] | color_1[obj_tile_x])
+                : color_lsb | color_msb;
 
+            if (obj_offset_x) {
                 u16_bytes mask_bytes = u16_to_bytes(mask << (8 - obj_offset_x));
 
                 if (obj_tile_x >= 0) {
-                    color_0[obj_tile_x] &= ~mask_bytes.hi;
-                    color_1[obj_tile_x] &= ~mask_bytes.hi;
-                    color_0[obj_tile_x] |= (color_lsb >> obj_offset_x) & mask_bytes.hi;
-                    color_1[obj_tile_x] |= (color_msb >> obj_offset_x) & mask_bytes.hi;
-
-                    source_0[obj_tile_x] &= ~mask_bytes.hi;
-                    source_1[obj_tile_x] &= ~mask_bytes.hi;
-                    source_0[obj_tile_x] |= (source_lsb >> obj_offset_x) & mask_bytes.hi;
-                    source_1[obj_tile_x] |= (source_msb >> obj_offset_x) & mask_bytes.hi;
+                    blend(&color_0[obj_tile_x], color_lsb >> obj_offset_x, mask_bytes.hi);
+                    blend(&color_1[obj_tile_x], color_msb >> obj_offset_x, mask_bytes.hi);
+                    blend(&source_0[obj_tile_x], source_lsb >> obj_offset_x, mask_bytes.hi);
+                    blend(&source_1[obj_tile_x], source_msb >> obj_offset_x, mask_bytes.hi);
                 }
 
-                if (obj_tile_x+1 < 20) {
-                    color_0[obj_tile_x+1] &= ~mask_bytes.lo;
-                    color_1[obj_tile_x+1] &= ~mask_bytes.lo;
-                    color_0[obj_tile_x+1] |= (color_lsb << (8 - obj_offset_x)) & mask_bytes.lo;
-                    color_1[obj_tile_x+1] |= (color_msb << (8 - obj_offset_x)) & mask_bytes.lo;
-
-                    source_0[obj_tile_x+1] &= ~mask_bytes.lo;
-                    source_1[obj_tile_x+1] &= ~mask_bytes.lo;
-                    source_0[obj_tile_x+1] |= (source_lsb << (8 - obj_offset_x)) & mask_bytes.lo;
-                    source_1[obj_tile_x+1] |= (source_msb << (8 - obj_offset_x)) & mask_bytes.lo;
+                if (obj_tile_x+1 < TILES_PER_LINE) {
+                    blend(&color_0[obj_tile_x+1], color_lsb << (8 - obj_offset_x), mask_bytes.lo);
+                    blend(&color_1[obj_tile_x+1], color_msb << (8 - obj_offset_x), mask_bytes.lo);
+                    blend(&source_0[obj_tile_x+1], source_lsb << (8 - obj_offset_x), mask_bytes.lo);
+                    blend(&source_1[obj_tile_x+1], source_msb << (8 - obj_offset_x), mask_bytes.lo);
                 }
             } else {
-                u8 mask = sprite.priority
-                    ? ~(color_0[obj_tile_x] | color_1[obj_tile_x])
-                    : color_lsb | color_msb;
-
-                color_0[obj_tile_x] &= ~mask;
-                color_1[obj_tile_x] &= ~mask;
-                color_0[obj_tile_x] |= color_lsb & mask;
-                color_1[obj_tile_x] |= color_msb & mask;
-
-                source_0[obj_tile_x] &= ~mask;
-                source_1[obj_tile_x] &= ~mask;
-                source_0[obj_tile_x] |= source_lsb & mask;
-                source_1[obj_tile_x] |= source_msb & mask;
+                blend(&color_0[obj_tile_x], color_lsb, mask);
+                blend(&color_1[obj_tile_x], color_msb, mask);
+                blend(&source_0[obj_tile_x], source_lsb, mask);
+                blend(&source_1[obj_tile_x], source_msb, mask);
             }
         }
     }
 
     // Get pixel color from info
     u32 pixel_colors[160];
-    for (int t = 0; t<20; t++) {
+    for (int t = 0; t<TILES_PER_LINE; t++) {
         u8 color_lsb = color_0[t];
         u8 color_msb = color_1[t];
         u8 source_lsb = source_0[t];

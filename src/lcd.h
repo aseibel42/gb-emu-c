@@ -22,5 +22,3 @@ struct lcd_stat {
     u8 oam_int : 1;
     u8 lcd_y_int : 1;
 };
-
-void lcd_init();

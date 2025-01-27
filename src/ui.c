@@ -1,9 +1,8 @@
 #include <stdio.h>
 
 #include "emu.h"
-#include "ui.h"
 #include "mem.h"
-#include "ppu.h"
+#include "ui.h"
 
 static SDL_Window *sdlWindow;
 static SDL_Renderer *sdlRenderer;
@@ -27,6 +26,8 @@ static SDL_Surface *sdlTilemapSurface2;
 
 static u32 elapsed = 0;
 static const float min_frame_duration_ms = 1000.0f / MAX_FPS;
+
+static u32 debug_palette[4] = {0xFFFFFFFF, 0xFFAAAAAA, 0xFF555555, 0xFF000000};
 
 int ui_scale = 2;
 
@@ -234,7 +235,7 @@ void display_tile(SDL_Surface *surface, u16 startLocation, u16 tileNum, int x, i
             rc.w = ui_scale;
             rc.h = ui_scale;
 
-            SDL_FillRect(surface, &rc, dmg_palette[color]);
+            SDL_FillRect(surface, &rc, debug_palette[color]);
         }
     }
 }

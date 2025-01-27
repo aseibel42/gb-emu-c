@@ -17,8 +17,3 @@ typedef struct {
     u8 header_checksum;
     u16 global_checksum;
 } rom_header;
-
-bool cart_load(u8 *cart);
-
-u8 cart_read(u16 addr);
-void cart_write(u16 addr, u8 value);

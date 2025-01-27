@@ -4,6 +4,7 @@
 
 #define LINES_PER_FRAME 154
 #define DOTS_PER_LINE 456
+#define TILES_PER_LINE 20
 
 #define PPU_MODE_OAM 0
 #define PPU_MODE_XFER 1
@@ -22,9 +23,6 @@ typedef struct {
     u8 y_flip : 1;
     u8 priority : 1;
 } obj_attr;
-
-extern obj_attr* oam_mem;
-extern u32 dmg_palette[4];
 
 void ppu_init();
 void ppu_tick();
