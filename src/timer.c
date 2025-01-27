@@ -3,7 +3,7 @@
 #include "mem.h"
 #include "util.h"
 
-u64 ticks = 0;
+u16 ticks = 0;
 
 void timer_init() {
     ticks = 0xAC00;

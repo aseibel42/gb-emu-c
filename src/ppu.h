@@ -24,7 +24,7 @@ typedef struct {
 } obj_attr;
 
 extern obj_attr* oam_mem;
-extern u32 debug_palette[4];
+extern u32 dmg_palette[4];
 
 void ppu_init();
 void ppu_tick();

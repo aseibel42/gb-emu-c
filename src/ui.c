@@ -40,13 +40,16 @@ void ui_init() {
     printf("SDL INIT\n");
 
     // Main window
-    SDL_CreateWindowAndRenderer(
+    if (SDL_CreateWindowAndRenderer(
         SCREEN_WIDTH,
         SCREEN_HEIGHT,
         0, // flags
         &sdlWindow,
         &sdlRenderer
-    );
+    ) < 0) {
+        fprintf(stdout, "SDL failed to create window and renderer! SDL_Error: %s\n", SDL_GetError());
+        return;
+    }
 
     SDL_SetWindowTitle(sdlWindow, "Gameboy Screen");
 
@@ -205,7 +208,7 @@ void ui_request_frame() {
     SDL_RenderClear(sdlRenderer);
 
     // Render
-    SDL_RenderCopy(sdlRenderer, sdlTexture, 0, 0);
+    SDL_RenderCopy(sdlRenderer, sdlTexture, NULL, NULL);
     SDL_RenderPresent(sdlRenderer);
 }
 
@@ -231,7 +234,7 @@ void display_tile(SDL_Surface *surface, u16 startLocation, u16 tileNum, int x, i
             rc.w = ui_scale;
             rc.h = ui_scale;
 
-            SDL_FillRect(surface, &rc, debug_palette[color]);
+            SDL_FillRect(surface, &rc, dmg_palette[color]);
         }
     }
 }
