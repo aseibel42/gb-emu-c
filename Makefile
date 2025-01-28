@@ -23,9 +23,9 @@ EXE := emu
 
 # Flags, libraries, and includes
 CFLAGS := -Wall -Wextra -std=c11
-LDFLAGS := -L./lib/sdl2/lib
-LDLIBS := -lmingw32 -lSDL2main -lSDL2
-INCS := -I./lib/sdl2/include -I"\C:\msys64\mingw64\include"
+LDFLAGS := -L./lib
+LDLIBS := -lSDL2
+INCS :=
 
 # Testing related
 TESTDIR := ./test/

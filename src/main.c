@@ -2,7 +2,7 @@
 
 int main(int argc, char **argv) {
 
-    emu_run("rom/dmg-acid2.gb");
+    emu_run("rom/drm.gb");
 
     return 0;
 }

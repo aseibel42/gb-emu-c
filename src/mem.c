@@ -1,5 +1,6 @@
 #include "cpu.h"
 #include "dma.h"
+#include "gamepad.h"
 #include "mem.h"
 
 /*
@@ -31,11 +32,33 @@ u8 mem_read(u16 addr) {
         return 0xFF;
     }
 
+    // Gamepad is arranged as 2x4 matrix.
+    // Either action buttons (") or d-pad is selected according to which flag is set.
+    if (addr == 0xFF00) {
+        // clear the lower nibble - this part is read from external gamepad state
+        u8 value = mem[addr] | 0xF;
+
+        // switch lower nibble according "select" flags
+        // if neither is active, all buttons are read as unpressed (0xF)
+        if (!bus.io.gamepad.select_btns) {
+            value &= btns.ctrl;
+        } else if (!bus.io.gamepad.select_dpad) {
+            value &= btns.dpad;
+        }
+
+        return value;
+    }
+
     return mem[addr];
 }
 
 void mem_write(u16 addr, u8 value) {
     cpu_cycle();
+
+    // Lower nibble of gamepad is read-only
+    if (addr == 0xFF00) {
+        value &= 0xF0;
+    }
 
     // Writing anything to DIV register resets it to 0.
     if (addr == 0xFF04) {

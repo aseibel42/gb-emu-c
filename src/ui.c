@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "emu.h"
+#include "gamepad.h"
 #include "mem.h"
 #include "ui.h"
 
@@ -181,41 +182,42 @@ void ui_init() {
 void ui_on_key(SDL_Keycode key_code, u8 state) {
     switch (key_code) {
         case SDLK_ESCAPE:
-            bus.io.gamepad.start = state;
+        case SDLK_RETURN:
+            btns.start = state;
             break;
 
         case SDLK_TAB:
-            bus.io.gamepad.select = state;
+            btns.select = state;
             break;
 
         case SDLK_BACKSPACE:
         case SDLK_z:
-            bus.io.gamepad.b = state;
+            btns.b = state;
             break;
 
         case SDLK_SPACE:
         case SDLK_x:
-            bus.io.gamepad.a = state;
+            btns.a = state;
             break;
 
         case SDLK_UP:
         case SDLK_w:
-            bus.io.gamepad.up = state;
+            btns.up = state;
             break;
 
         case SDLK_DOWN:
         case SDLK_s:
-            bus.io.gamepad.down = state;
+            btns.down = state;
             break;
 
         case SDLK_LEFT:
         case SDLK_a:
-            bus.io.gamepad.left = state;
+            btns.left = state;
             break;
 
         case SDLK_RIGHT:
         case SDLK_d:
-            bus.io.gamepad.right = state;
+            btns.right = state;
             break;
     }
 }
