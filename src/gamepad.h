@@ -7,8 +7,8 @@ struct gamepad {
         struct {
             u8 a: 1;
             u8 b: 1;
-            u8 start: 1;
             u8 select: 1;
+            u8 start: 1;
             u8 : 1;
             u8 select_btns: 1;
         };
