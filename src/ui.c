@@ -178,11 +178,55 @@ void ui_init() {
 
 }
 
+void ui_on_key(SDL_Keycode key_code, u8 state) {
+    switch (key_code) {
+        case SDLK_ESCAPE:
+            bus.io.gamepad.start = state;
+            break;
+
+        case SDLK_TAB:
+            bus.io.gamepad.select = state;
+            break;
+
+        case SDLK_BACKSPACE:
+        case SDLK_z:
+            bus.io.gamepad.b = state;
+            break;
+
+        case SDLK_SPACE:
+        case SDLK_x:
+            bus.io.gamepad.a = state;
+            break;
+
+        case SDLK_UP:
+        case SDLK_w:
+            bus.io.gamepad.up = state;
+            break;
+
+        case SDLK_DOWN:
+        case SDLK_s:
+            bus.io.gamepad.down = state;
+            break;
+
+        case SDLK_LEFT:
+        case SDLK_a:
+            bus.io.gamepad.left = state;
+            break;
+
+        case SDLK_RIGHT:
+        case SDLK_d:
+            bus.io.gamepad.right = state;
+            break;
+    }
+}
+
 void ui_handle_events() {
-    // printf("UI HANDLE EVENTS\n");
     SDL_Event e;
     while (SDL_PollEvent(&e) > 0) {
-        // TODO: joypad input
+        if (e.type == SDL_KEYDOWN || e.type == SDL_KEYUP) {
+            printf("KEY EVENT: %d\n", e.key.state);
+            ui_on_key(e.key.keysym.sym, !e.key.state);
+        }
 
         if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_CLOSE) {
             emu_exit();
@@ -202,7 +246,6 @@ void ui_request_frame() {
     if (delay > 0) SDL_Delay(delay);
 
     elapsed = SDL_GetTicks();
-    printf("DRAW FRAME (TICKS: %d)\n", elapsed);
 
     // Clear screen
     SDL_SetRenderDrawColor(sdlRenderer, 0, 0, 0, 255);

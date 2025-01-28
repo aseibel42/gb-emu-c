@@ -1,10 +1,9 @@
 #include <pthread.h>
 #include <stdio.h>
-#include <time.h>
 
 #include "cpu.h"
-#include "debug.h"
 #include "emu.h"
+#include "gamepad.h"
 #include "mem.h"
 #include "ppu.h"
 #include "timer.h"
@@ -34,6 +33,7 @@ void* cpu_process(void* ptr) {
     timer_init();
     cpu_init();
     ppu_init();
+    gamepad_init();
 
     printf("CPU INIT\n");
 
@@ -49,7 +49,6 @@ void* cpu_process(void* ptr) {
         while (bus.io.lcd_stat.ppu_mode != PPU_MODE_VBLANK) {
             cpu_step();
         }
-        printf("VBLANK START (TICKS: %hu)\n", ticks);
 
         // Signal that CPU is finished with this frame
         frames++;

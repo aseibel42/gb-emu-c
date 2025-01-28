@@ -1,8 +1,7 @@
 #include "util.h"
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_timer.h>
 
-#define MAX_FPS 4.0f
+#define MAX_FPS 30.0f
 #define Y_RESOLUTION 144
 #define X_RESOLUTION 160
 #define SCREEN_WIDTH  640

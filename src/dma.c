@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include "dma.h"
 #include "mem.h"
 
@@ -9,7 +8,6 @@ static u8 dma_offset = 0;
 static u16 dma_source_addr = 0;
 
 void dma_start(u8 source_addr) {
-    printf("DMA START\n");
     dma_active = true;
     dma_delay = 1;
     dma_offset = 0;

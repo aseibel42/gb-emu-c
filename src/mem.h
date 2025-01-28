@@ -1,10 +1,11 @@
 #pragma once
 
+#include "gamepad.h"
 #include "lcd.h"
 #include "util.h"
 
 struct io {
-    u8 joypad_input; // 0xFF00
+    struct gamepad gamepad; // 0xFF00
     u8 serial[2]; // 0xFF01-FF02
     u8 : 8; // padding
 
