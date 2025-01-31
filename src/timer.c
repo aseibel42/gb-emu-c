@@ -13,6 +13,8 @@ void timer_init() {
 
 void timer_tick() {
     ticks++;
+    u16_bytes bytes = u16_to_bytes(ticks);
+    bus.io.timer_div = bytes.hi;
 
     // tima is incremented when:
     // 1) 3rd bit of tac is set AND
