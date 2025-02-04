@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #include "emu.h"
-#include "gamepad.h"
+#include "io.h"
 #include "mem.h"
 #include "ui.h"
 
@@ -262,12 +262,12 @@ u32* ui_scanline_start(u8 y) {
     return sdlSurface->pixels + y * sdlSurface->pitch;
 }
 
-void display_tile(SDL_Surface *surface, u16 startLocation, u16 tileNum, int x, int y) {
+void display_tile(SDL_Surface *surface, u16 tileNum, int x, int y) {
     SDL_Rect rc;
 
     for (int tileY=0; tileY<16; tileY += 2) {
-        u8 b1 = mem[startLocation + (tileNum * 16) + tileY];
-        u8 b2 = mem[startLocation + (tileNum * 16) + tileY + 1];
+        u8 b1 = bus.vram[16 * tileNum + tileY];
+        u8 b2 = bus.vram[16 * tileNum + tileY + 1];
 
         for (int bit=7; bit >= 0; bit--) {
             u8 hi = !!(b2 & (1 << bit)) << 1;
@@ -297,14 +297,11 @@ void ui_update_debug_window() {
     rc.h = sdlDebugSurface->h;
     SDL_FillRect(sdlDebugSurface, &rc, 0xFF111111);
 
-    u16 addr = 0x8000;
-
     //384 tiles, 24 x 16
     for (int y=0; y<24; y++) {
         for (int x=0; x<16; x++) {
             display_tile(
                 sdlDebugSurface,
-                addr,
                 tileNum,
                 xDraw + (x * ui_scale),
                 yDraw + (y * ui_scale)
@@ -335,16 +332,14 @@ void ui_update_tilemap_window(SDL_Surface *_surface, SDL_Renderer *_renderer, SD
     SDL_FillRect(_surface, &rc, 0xFF111111);
 
     // BG tile map area: 0 = 9800–9BFF; 1 = 9C00–9FFF
-    u16 vram_start_addr = 0x8000;
     // u16 tilemapStartAddr = 0x9800;
 
     //tilemap, 32 x 32 (1024) tiles, bytes at 0x9800-9BFF represent ids of tiles (256 total) in mem 0x8000-8FFF
     for (int y=0; y<32; y++) {
         for (int x=0; x<32; x++) {
-            tileNum = mem[tilemap_start_addr + 32 * y + x];
+            tileNum = bus.vram[tilemap_start_addr + 32 * y + x];
             display_tile(
                 _surface,
-                vram_start_addr,
                 tileNum,
                 xDraw + (x * ui_scale),
                 yDraw + (y * ui_scale)

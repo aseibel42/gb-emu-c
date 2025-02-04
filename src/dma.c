@@ -26,7 +26,8 @@ void dma_tick() {
     }
 
     // Copy a single byte to Object Attribute Memory
-    bus.oam[dma_offset] = mem[dma_source_addr + dma_offset];
+    // TODO: if timings don't matter, a memcpy would be more efficient than copying one value at a time
+    bus.oam[dma_offset] = mem_read(dma_source_addr + dma_offset);
 
     dma_offset++;
 

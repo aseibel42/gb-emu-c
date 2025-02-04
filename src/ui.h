@@ -7,8 +7,8 @@
 #define SCREEN_WIDTH  640
 #define SCREEN_HEIGHT 576
 
-#define TILEMAP1_START_ADDR 0x9800
-#define TILEMAP2_START_ADDR 0x9C00
+#define TILEMAP1_START_ADDR 0x1800
+#define TILEMAP2_START_ADDR 0x1C00
 
 void ui_init();
 void ui_handle_events();

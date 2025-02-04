@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "interrupt.h"
+#include "io.h"
 #include "mem.h"
 #include "ppu.h"
 #include "ui.h"
@@ -35,30 +36,6 @@ static inline void reverse_bits(u8* x) {
 void ppu_init() {
     ppu_frame = 0;
     ppu_dots = 0;
-
-    // LCD Control
-    bus.io.lcd_control.bgw_enable = 1;
-    bus.io.lcd_control.obj_enable = 0;
-    bus.io.lcd_control.obj_height = 0;
-    bus.io.lcd_control.bg_tile_map = 0;
-    bus.io.lcd_control.bgw_tiles = 1;
-    bus.io.lcd_control.win_enable = 0;
-    bus.io.lcd_control.win_tile_map = 0;
-    bus.io.lcd_control.lcd_enable = 1;
-
-    // LCD Stat
-    bus.io.lcd_stat.ppu_mode = PPU_MODE_OAM;
-
-    // PPU Registers
-    bus.io.scroll_x = 0;
-    bus.io.scroll_y = 0;
-    bus.io.lcd_y = 0;
-    bus.io.lcd_y_compare = 0;
-    bus.io.bg_palette = 0xFC;
-    bus.io.obj_palette[0] = 0xFF;
-    bus.io.obj_palette[1] = 0xFF;
-    bus.io.win_y = 0;
-    bus.io.win_x = 0;
 }
 
 void sort_net_10(u16 a[]) {
@@ -75,8 +52,8 @@ void sort_net_10(u16 a[]) {
 }
 
 void ppu_oam_scan() {
-    u8 line_y = bus.io.lcd_y + 16;
-    u8 sprite_height = 8 << bus.io.lcd_control.obj_height;
+    u8 line_y = io.lcd_y + 16;
+    u8 sprite_height = 8 << io.lcdc.obj_height;
 
     // initialize line sprites array with large numbers that will not be sorted
     line_sprite_count = 0;
@@ -108,8 +85,8 @@ void ppu_oam_scan() {
 
 void ppu_draw_line() {
 
-    if (bus.io.lcd_y >= Y_RESOLUTION) {
-        printf("SCANLINE Y = %d (THIS SHOULD NEVER HAPPEN!)\n", bus.io.lcd_y);
+    if (io.lcd_y >= Y_RESOLUTION) {
+        printf("SCANLINE Y = %d (THIS SHOULD NEVER HAPPEN!)\n", io.lcd_y);
         return;
     }
 
@@ -121,18 +98,18 @@ void ppu_draw_line() {
     u8 source_1[TILES_PER_LINE] = {0};
 
     // skip bg and window if not enabled
-    if (bus.io.lcd_control.bgw_enable) {
+    if (io.lcdc.bgw_enable) {
         // tile addressing
-        u16 tile_data_addr = bus.io.lcd_control.bgw_tiles ? 0x8000 : 0x8800;
-        u8 tile_addr_mode = !bus.io.lcd_control.bgw_tiles << 7;
+        u16 tile_data_addr = io.lcdc.bgw_tiles ? 0x0000 : 0x0800;
+        u8 tile_addr_mode = !io.lcdc.bgw_tiles << 7;
 
         // background
-        u8 bg_y = bus.io.lcd_y + bus.io.scroll_y;
+        u8 bg_y = io.lcd_y + io.scroll_y;
         u8 bg_row_y = bg_y & 7;
         u8 bg_tile_y = bg_y / 8;
-        u8 bg_start_x = bus.io.scroll_x / 8;
-        u8 bg_offset_x = bus.io.scroll_x & 7;
-        u16 bg_tile_map = bus.io.lcd_control.bg_tile_map ? 0x9C00 : 0x9800;
+        u8 bg_start_x = io.scroll_x / 8;
+        u8 bg_offset_x = io.scroll_x & 7;
+        u16 bg_tile_map = io.lcdc.bg_tile_map ? 0x1C00 : 0x1800;
         u16 bg_tile_map_addr = bg_tile_map + 32*bg_tile_y;
         u16 bg_tile_data_addr = tile_data_addr + 2*bg_row_y;
 
@@ -141,10 +118,10 @@ void ppu_draw_line() {
 
             for (u8 t = 0; t < TILES_PER_LINE+1; t++) {
                 u8 tile_x = (bg_start_x + t) & 31;
-                u8 tile_id = mem[bg_tile_map_addr + tile_x] + tile_addr_mode;
+                u8 tile_id = bus.vram[bg_tile_map_addr + tile_x] + tile_addr_mode;
                 u16 row_addr = bg_tile_data_addr + 16*tile_id;
-                u8 color_lsb = mem[row_addr];
-                u8 color_msb = mem[row_addr + 1];
+                u8 color_lsb = bus.vram[row_addr];
+                u8 color_msb = bus.vram[row_addr + 1];
 
                 if (t > 0) {
                     blend(&color_0[t-1], color_lsb >> (8 - bg_offset_x), mask_bytes.hi);
@@ -159,20 +136,20 @@ void ppu_draw_line() {
         } else {
             for (u8 t = 0; t < TILES_PER_LINE; t++) {
                 u8 tile_x = (bg_start_x + t) & 31;
-                u8 tile_id = mem[bg_tile_map_addr + tile_x] + tile_addr_mode;
+                u8 tile_id = bus.vram[bg_tile_map_addr + tile_x] + tile_addr_mode;
                 u16 row_addr = bg_tile_data_addr + 16*tile_id;
-                color_0[t] = mem[row_addr];
-                color_1[t] = mem[row_addr + 1];
+                color_0[t] = bus.vram[row_addr];
+                color_1[t] = bus.vram[row_addr + 1];
             }
         }
 
         // window
-        if (bus.io.lcd_control.win_enable && win_test_y && bus.io.win_x < 167) {
+        if (io.lcdc.win_enable && win_test_y && io.win_x < 167) {
             u8 win_row_y = win_y & 7;
             u8 win_tile_y = win_y / 8;
-            u8 win_start_x = (bus.io.win_x - 7) / 8;
-            u8 win_offset_x = (bus.io.win_x - 7) & 7;
-            u16 win_tile_map = bus.io.lcd_control.win_tile_map ? 0x9C00 : 0x9800;
+            u8 win_start_x = (io.win_x - 7) / 8;
+            u8 win_offset_x = (io.win_x - 7) & 7;
+            u16 win_tile_map = io.lcdc.win_tile_map ? 0x1C00 : 0x1800;
             u16 win_tile_map_addr = win_tile_map + 32*win_tile_y;
             u16 win_tile_data_addr = tile_data_addr + 2*win_row_y;
 
@@ -180,10 +157,10 @@ void ppu_draw_line() {
                 u16_bytes mask_bytes = u16_to_bytes(0xFF << (8 - win_offset_x));
 
                 for (u8 t = 0; t < TILES_PER_LINE+1 - win_start_x; t++) {
-                    u8 tile_id = mem[win_tile_map_addr + t] + tile_addr_mode;
+                    u8 tile_id = bus.vram[win_tile_map_addr + t] + tile_addr_mode;
                     u16 row_addr = win_tile_data_addr + 16*tile_id;
-                    u8 color_lsb = mem[row_addr];
-                    u8 color_msb = mem[row_addr + 1];
+                    u8 color_lsb = bus.vram[row_addr];
+                    u8 color_msb = bus.vram[row_addr + 1];
 
                     if (win_start_x + t > 0) {
                         blend(&color_0[win_start_x + t-1], color_lsb >> win_offset_x, mask_bytes.hi);
@@ -197,10 +174,10 @@ void ppu_draw_line() {
                 }
             } else {
                 for (u8 t = 0; t < TILES_PER_LINE-win_start_x; t++) {
-                    u8 tile_id = mem[win_tile_map_addr + t] + tile_addr_mode;
+                    u8 tile_id = bus.vram[win_tile_map_addr + t] + tile_addr_mode;
                     u16 row_addr = win_tile_data_addr + 16*tile_id;
-                    color_0[win_start_x + t] = mem[row_addr];
-                    color_1[win_start_x + t] = mem[row_addr + 1];
+                    color_0[win_start_x + t] = bus.vram[row_addr];
+                    color_1[win_start_x + t] = bus.vram[row_addr + 1];
                 }
             }
         }
@@ -212,7 +189,7 @@ void ppu_draw_line() {
     }
 
     // sprites
-    if (bus.io.lcd_control.obj_enable && line_sprite_count > 0) {
+    if (io.lcdc.obj_enable && line_sprite_count > 0) {
         for (i8 i = line_sprite_count - 1; i >= 0; i--) {
             sprite_info info = line_sprites[i];
 
@@ -224,16 +201,16 @@ void ppu_draw_line() {
             i8 obj_tile_x = (info.x_pos - 8) / 8;
             u8 obj_offset_x = info.x_pos & 7;
 
-            u8 obj_row_y = bus.io.lcd_y + 16 - sprite.y_pos;
+            u8 obj_row_y = io.lcd_y + 16 - sprite.y_pos;
             obj_row_y ^= -sprite.y_flip;
-            obj_row_y &= (bus.io.lcd_control.obj_height << 3) | 0b111;
+            obj_row_y &= (io.lcdc.obj_height << 3) | 0b111;
 
             // remove last bit for 2-tile sprites
-            u8 tile_id = sprite.tile & ~bus.io.lcd_control.obj_height;
+            u8 tile_id = sprite.tile & ~io.lcdc.obj_height;
 
-            u16 row_addr = 0x8000 + 16*tile_id + 2*obj_row_y;
-            u8 color_lsb = mem[row_addr];
-            u8 color_msb = mem[row_addr + 1];
+            u16 row_addr = 16*tile_id + 2*obj_row_y;
+            u8 color_lsb = bus.vram[row_addr];
+            u8 color_msb = bus.vram[row_addr + 1];
             u8 source_msb = -sprite.dmg_palette;
             u8 source_lsb = ~source_msb;
 
@@ -292,50 +269,50 @@ void ppu_draw_line() {
             lo = (source_lsb >> bit) & 1;
             u8 palette_id = (hi << 1) | lo;
 
-            u8 palette = palette_id ? bus.io.obj_palette[palette_id-1] : bus.io.bg_palette;
+            u8 palette = palette_id ? io.obj_palette[palette_id-1] : io.bg_palette;
             u8 color_index = (palette >> (2*color_id)) & 0b11;
             pixel_colors[8*t+7-bit] = dmg_palette[color_index];
         }
     }
 
     // Copy pixels to surface
-    u32* scanline_ptr = ui_scanline_start(bus.io.lcd_y);
+    u32* scanline_ptr = ui_scanline_start(io.lcd_y);
     memcpy(scanline_ptr, pixel_colors, 4*160);
 }
 
 void ppu_end_line() {
     ppu_dots = 0;
-    bus.io.lcd_y++;
+    io.lcd_y++;
 
     // window y is only incremented on lines where the window is visible
-    if (bus.io.lcd_control.win_enable && win_test_y && bus.io.win_x < 167) {
+    if (io.lcdc.win_enable && win_test_y && io.win_x < 167) {
         win_y++;
     }
-    win_test_y = bus.io.lcd_y >= bus.io.win_y;
+    win_test_y = io.lcd_y >= io.win_y;
 
-    bool match = bus.io.lcd_y == bus.io.lcd_y_compare;
-    if (match && bus.io.lcd_stat.lcd_y_int) {
+    bool match = io.lcd_y == io.lcd_y_compare;
+    if (match && io.stat.lcd_y_int) {
         cpu_request_interrupt(INTERRUPT_LCD_STAT);
     }
-    bus.io.lcd_stat.lcd_y_cmp = match;
+    io.stat.lcd_y_cmp = match;
 }
 
 void ppu_end_frame() {
     ppu_frame++;
-    bus.io.lcd_y = 0;
+    io.lcd_y = 0;
     win_y = 0;
 }
 
 void ppu_mode_oam() {
     if (ppu_dots >= 80) {
-        bus.io.lcd_stat.ppu_mode = PPU_MODE_XFER;
+        io.stat.ppu_mode = PPU_MODE_XFER;
         ppu_draw_line();
     }
 }
 
 void ppu_mode_xfer() {
     if (ppu_dots >= 80 + 172) { // TODO: add extra dots from "penalties"
-        bus.io.lcd_stat.ppu_mode = PPU_MODE_HBLANK;
+        io.stat.ppu_mode = PPU_MODE_HBLANK;
     }
 }
 
@@ -343,14 +320,14 @@ void ppu_mode_hblank() {
     if (ppu_dots >= DOTS_PER_LINE) {
         ppu_end_line();
 
-        if (bus.io.lcd_y >= Y_RESOLUTION) {
-            bus.io.lcd_stat.ppu_mode = PPU_MODE_VBLANK;
+        if (io.lcd_y >= Y_RESOLUTION) {
+            io.stat.ppu_mode = PPU_MODE_VBLANK;
             cpu_request_interrupt(INTERRUPT_VBLANK);
-            if (bus.io.lcd_stat.vblank_int) {
+            if (io.stat.vblank_int) {
                 cpu_request_interrupt(INTERRUPT_LCD_STAT);
             }
         } else {
-            bus.io.lcd_stat.ppu_mode = PPU_MODE_OAM;
+            io.stat.ppu_mode = PPU_MODE_OAM;
             ppu_oam_scan();
         }
     }
@@ -360,9 +337,9 @@ void ppu_mode_vblank() {
     if (ppu_dots >= DOTS_PER_LINE) {
         ppu_end_line();
 
-        if (bus.io.lcd_y >= LINES_PER_FRAME) {
+        if (io.lcd_y >= LINES_PER_FRAME) {
             ppu_end_frame();
-            bus.io.lcd_stat.ppu_mode = PPU_MODE_OAM;
+            io.stat.ppu_mode = PPU_MODE_OAM;
             ppu_oam_scan();
         }
     }
@@ -371,7 +348,7 @@ void ppu_mode_vblank() {
 void ppu_tick() {
     ppu_dots++;
 
-    switch (bus.io.lcd_stat.ppu_mode) {
+    switch (io.stat.ppu_mode) {
         case PPU_MODE_OAM:
             ppu_mode_oam();
             break;

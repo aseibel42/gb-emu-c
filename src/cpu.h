@@ -35,10 +35,18 @@ void cpu_init();
 bool cpu_step();
 void cpu_cycle();
 
-u8 fetch();
-u16 fetch16();
+u8 cpu_fetch();
+u8 cpu_read(u16 addr);
+void cpu_write(u16 addr, u8 value);
+
+u16 cpu_fetch16();
+u16 cpu_read16(u16 addr);
+void cpu_write16(u16 addr, u16 value);
 
 void cpu_jump(u16 addr);
 void cpu_jmpr(i8 x);
 
 void set_flags(i8 z, i8 n, i8 h, i8 c);
+
+void stack_push16(u16 data);
+u16 stack_pop16();

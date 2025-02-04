@@ -1,82 +1,127 @@
-#include "cpu.h"
+#include <stdlib.h>
+#include <stdio.h>
+
 #include "dma.h"
-#include "gamepad.h"
+#include "io.h"
 #include "mem.h"
 
-/*
-    0x0000 - 0x3FFF : ROM Bank 0
-    0x4000 - 0x7FFF : ROM Bank 1 - Switchable
-    0x8000 - 0x97FF : CHR RAM
-    0x9800 - 0x9BFF : Video RAM / Map BG 1
-    0x9C00 - 0x9FFF : Video RAM / Map BG 2
-    0xA000 - 0xBFFF : Cartridge RAM
-    0xC000 - 0xCFFF : Work RAM Bank 0
-    0xD000 - 0xDFFF : Work RAM Bank 1-7 - switchable - Color only
-    0xE000 - 0xFDFF : Echo RAM (mirror of 0xC000-DDFF) - prohibited by Nintendo
-    0xFE00 - 0xFE9F : Object Attribute Memory (OAM)
-    0xFEA0 - 0xFEFF : Unusable - prohibited by Nintendo
-    0xFF00 - 0xFF7F : I/O Registers
-    0xFF80 - 0xFFFE : Zero Page / High RAM
-    0xFFFF          : CPU Interrupt
-*/
+Bus bus = {};
 
-struct bus bus = {0};
-u8* mem = (u8*)&bus;
+static u8 oam[0xA0] = {};
+
+void mem_init() {
+    // Video RAM
+    bus.vram = malloc(0x2000);
+    if (!bus.vram) {
+        perror("Failed to allocate memory for VRAM\n");
+        goto cleanup_vram;
+    }
+
+    // Work RAM
+    bus.wram_0 = malloc(0x1000);
+    if (!bus.wram_0) {
+        perror("Failed to allocate memory for WRAM (bank: 0)\n");
+        goto cleanup_wram_0;
+    }
+    bus.wram_1 = malloc(0x1000);
+    if (!bus.wram_1) {
+        perror("Failed to allocate memory for WRAM (bank: 1)\n");
+        goto cleanup_wram_1;
+    }
+
+    bus.oam = oam;
+    bus.page_0 = (u8*)&io;
+    return;
+
+cleanup_wram_1:
+    free(bus.wram_1);
+    bus.wram_1 = NULL;
+cleanup_wram_0:
+    free(bus.wram_0);
+    bus.wram_0 = NULL;
+cleanup_vram:
+    free(bus.vram);
+    bus.vram = NULL;
+}
 
 u8 mem_read(u16 addr) {
-    cpu_cycle();
-
-    // OAM is inaccessible during DMA
-    // NOTE: in real hardware, only HRAM is accessible
-    if (dma_active && addr >= 0xFE00 && addr < 0xFEA0) {
-        return 0xFF;
-    }
-
-    // Gamepad is arranged as 2x4 matrix.
-    // Either action buttons (") or d-pad is selected according to which flag is set.
-    if (addr == 0xFF00) {
-        // clear the lower nibble - this part is read from external gamepad state
-        u8 value = mem[addr] | 0xF;
-
-        // switch lower nibble according "select" flags
-        // if neither is active, all buttons are read as unpressed (0xF)
-        if (!bus.io.gamepad.select_btns) {
-            value &= btns.ctrl;
-        } else if (!bus.io.gamepad.select_dpad) {
-            value &= btns.dpad;
+    u8 value = 0xFF;
+    if (addr < 0x4000) {
+        value = bus.rom_0[addr];
+    } else if (addr < 0x8000) {
+        value = bus.rom_1[addr - 0x4000];
+    } else if (addr < 0xA000) {
+        value = bus.vram[addr - 0x8000];
+    } else if (addr < 0xC000) {
+        value = bus.sram[addr - 0xA000];
+    } else if (addr < 0xD000) {
+        value = bus.wram_0[addr - 0xC000];
+    } else if (addr < 0xE000) {
+        value = bus.wram_1[addr - 0xD000];
+    } else if (addr < 0xFE00) {
+        // Echo RAM - Prohibited
+    } else if (addr < 0xFEA0) {
+        // OAM is inaccessible during DMA
+        if (!dma_active) {
+            value = bus.oam[addr - 0xFE00];
         }
-
-        return value;
+    } else if (addr < 0xFF00) {
+        // Prohibited
+    } else {
+        // Gamepad is arranged as 2x4 matrix.
+        // Either action buttons or d-pad is selected according to JOYP flags.
+        if (addr == 0xFF00) {
+            // Lower nibble is read from external gamepad state
+            value = io.joyp.value | 0xF;
+            if (!io.joyp.select_btns) {
+                value &= btns.ctrl;
+            } else if (!io.joyp.select_dpad) {
+                value &= btns.dpad;
+            }
+        } else {
+            value = bus.page_0[addr - 0xFF00];
+        }
     }
 
-    return mem[addr];
+    return value;
 }
 
 void mem_write(u16 addr, u8 value) {
-    cpu_cycle();
-
-    // Lower nibble of gamepad is read-only
-    if (addr == 0xFF00) {
-        value &= 0xF0;
+    if (addr < 0x4000) {
+        // bus.rom_0[addr] = value;
+    } else if (addr < 0x8000) {
+        // bus.rom_1[addr - 0x4000] = value;
+    } else if (addr < 0xA000) {
+        bus.vram[addr - 0x8000] = value;
+    } else if (addr < 0xC000) {
+        bus.sram[addr - 0xA000] = value;
+    } else if (addr < 0xD000) {
+        bus.wram_0[addr - 0xC000] = value;
+    } else if (addr < 0xE000) {
+        bus.wram_1[addr - 0xD000] = value;
+    } else if (addr < 0xFE00) {
+        // Echo RAM - Prohibited
+    } else if (addr < 0xFEA0) {
+        if (!dma_active) {
+            bus.oam[addr - 0xFE00] = value;
+        }
+    } else if (addr < 0xFF00) {
+        // Prohibited
+    } else {
+        if (addr == 0xFF00) {
+            // Lower nibble of gamepad is read-only
+            io.joyp.value = (value & 0xF0) | (io.joyp.value & 0xF);
+        } else if (addr == 0xFF04) {
+            // Writing anything to DIV register resets it to 0
+            io.div = 0;
+        } else if (addr == 0xFF46) {
+            // Writing anything to DMA register starts a DMA transfer to OAM
+            io.dma = value;
+            dma_start(value);
+        } else {
+            bus.page_0[addr - 0xFF00] = value;
+        }
     }
-
-    // Writing anything to DIV register resets it to 0.
-    if (addr == 0xFF04) {
-        value = 0;
-    }
-
-    // Writing anything to DMA register starts a OAM DMA transfer
-    else if (addr == 0xFF46) {
-        dma_start(value);
-    }
-
-    // OAM is inaccessible during DMA
-    // NOTE: in real hardware, only HRAM is accessible
-    if (dma_active && addr >= 0xFE00 && addr < 0xFEA0) {
-        return;
-    }
-
-    mem[addr] = value;
 }
 
 u16 mem_read16(u16 addr) {
