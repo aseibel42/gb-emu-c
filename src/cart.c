@@ -4,7 +4,7 @@
 #include "cart.h"
 #include "mem.h"
 
-Cart cart = {0, NULL, 0, NULL};
+Cart cart = {0};
 
 // RAM size lookup table
 static const size_t ram_size_table[] = {
@@ -66,7 +66,7 @@ void mbc2_reg(u16 addr, u8 value) {
         if (bit_read(u16_to_bytes(addr).hi, 0)) {
             cart.rom_bank = value & 0xF;
             cart.rom_bank += !cart.rom_bank;
-            bus.rom_1 = cart.rom + (cart.rom_bank << 14);
+            bus.rom_1 = cart.rom + cart.rom_bank * ROM_BANK_SIZE;
         } else {
             cart.ram_enable = value == 0x0A;
         }
@@ -83,10 +83,10 @@ void mbc3_reg(u16 addr, u8 value) {
     } else if (addr < 0x4000) {
         cart.rom_bank = value & 0x7F;
         cart.rom_bank += !cart.rom_bank;
-        bus.rom_1 = cart.rom + (cart.rom_bank << 14);
+        bus.rom_1 = cart.rom + cart.rom_bank * ROM_BANK_SIZE;
     } else if (addr < 0x6000) {
         cart.ram_bank = value & 0x03;
-        bus.sram = cart.ram + (cart.ram_bank << 13);
+        bus.sram = cart.ram + cart.ram_bank * RAM_BANK_SIZE;
     } else if (addr < 0x8000) {
         // Latch clock data?
     }
