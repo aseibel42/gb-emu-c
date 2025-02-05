@@ -8,13 +8,109 @@ Cart cart = {0, NULL, 0, NULL};
 
 // RAM size lookup table
 static const size_t ram_size_table[] = {
-    0,          // 0x00:   0 (no RAM)
-    0,          // 0x01:  -- (unused)
-    8 * 1024,   // 0x02:   8 KB
-    32 * 1024,  // 0x03:  32 KB
-    128 * 1024, // 0x04: 128 KB
-    64 * 1024,  // 0x05:  64 KB
+    0,  // 0x00:   0 (no RAM)
+    0,  // 0x01:  -- (unused)
+    1,  // 0x02:   8 KB
+    4,  // 0x03:  32 KB
+    16, // 0x04: 128 KB
+    8,  // 0x05:  64 KB
 };
+
+u8 mbc_read_ram(u16 addr) {
+    return bus.sram[addr];
+}
+
+void mbc_write_ram(u16 addr, u8 value) {
+    bus.sram[addr] = value;
+}
+
+// MBC2 is limited to 512 bytes of half-byte RAM
+// Only the lower nibble can be read
+u8 mbc2_read_ram(u16 addr) {
+    return bus.sram[addr & 0x1FF] & 0xF;
+}
+
+void mbc2_write_ram(u16 addr, u8 value) {
+    bus.sram[addr & 0x1FF] = value;
+}
+
+// MBC1 is odd because the 2-bit ram_bank register is used for both the
+// ram_bank _and_ rom_0, but only if mbc.mode is 1
+void mbc1_reg(u16 addr, u8 value) {
+    if (addr < 0x2000) {
+        cart.ram_enable = (value & 0xF) == 0xA;
+    } else {
+        if (addr < 0x4000) {
+            cart.rom_bank = value & 0x1F;
+            cart.rom_bank += !cart.rom_bank;
+        } else {
+            if (addr < 0x6000) {
+                cart.ram_bank = value & 0x03;
+            } else if (addr < 0x8000) {
+                cart.mbc_mode = value & 0x01;
+            }
+            bus.sram = cart.ram + cart.mbc_mode * (cart.ram_bank * RAM_BANK_SIZE);
+        }
+
+        // update rom pointers
+        u8 mask = cart.num_rom_banks - 1;
+        u8 rom_bank_0 = cart.mbc_mode * (cart.ram_bank << 5);
+        u8 rom_bank_1 = cart.rom_bank | (cart.ram_bank << 5);
+        bus.rom_0 = cart.rom + (rom_bank_0 & mask) * ROM_BANK_SIZE;
+        bus.rom_1 = cart.rom + (rom_bank_1 & mask) * ROM_BANK_SIZE;
+    }
+}
+
+void mbc2_reg(u16 addr, u8 value) {
+    if (addr < 0x3FFF) {
+        if (bit_read(u16_to_bytes(addr).hi, 0)) {
+            cart.rom_bank = value & 0xF;
+            cart.rom_bank += !cart.rom_bank;
+            bus.rom_1 = cart.rom + (cart.rom_bank << 14);
+        } else {
+            cart.ram_enable = value == 0x0A;
+        }
+    }
+}
+
+void mbc3_reg(u16 addr, u8 value) {
+    if (addr < 0x2000) {
+        if (value == 0x0A) {
+            cart.ram_enable = true;
+        } else if (!value) {
+            cart.ram_enable = false;
+        }
+    } else if (addr < 0x4000) {
+        cart.rom_bank = value & 0x7F;
+        cart.rom_bank += !cart.rom_bank;
+        bus.rom_1 = cart.rom + (cart.rom_bank << 14);
+    } else if (addr < 0x6000) {
+        cart.ram_bank = value & 0x03;
+        bus.sram = cart.ram + (cart.ram_bank << 13);
+    } else if (addr < 0x8000) {
+        // Latch clock data?
+    }
+}
+
+// MBC5 is similar to MBC3, with the `mode` register repurposed as the 9th bit of rom_bank
+void mbc5_reg(u16 addr, u8 value) {
+    if (addr < 0x2000) {
+        if (value == 0x0A) {
+            cart.ram_enable = true;
+        } else if (!value) {
+            cart.ram_enable = false;
+        }
+    } else if (addr < 0x3000) {
+        cart.rom_bank = value;
+        bus.rom_1 = cart.rom + (cart.rom_bank | (cart.mbc_mode << 8)) * ROM_BANK_SIZE;
+    } else if (addr < 0x4000) {
+        cart.mbc_mode = value & 0x01;
+        bus.rom_1 = cart.rom + (cart.rom_bank | (cart.mbc_mode << 8)) * ROM_BANK_SIZE;
+    } else if (addr < 0x6000) {
+        cart.ram_bank = value & 0x0F;
+        bus.sram = cart.ram + cart.ram_bank * RAM_BANK_SIZE;
+    }
+}
 
 void load_rom(const char *filename) {
     printf("Loading ROM: %s\n", filename);
@@ -46,16 +142,17 @@ void load_rom(const char *filename) {
     }
 
     // allocate memory for ROM
-    cart.rom_size = 32 << (header.rom_size + 10);
-    cart.rom = malloc(cart.rom_size);
+    cart.num_rom_banks = 2 << header.rom_size;
+    cart.rom = malloc(cart.num_rom_banks * ROM_BANK_SIZE);
     if (!cart.rom) {
         perror("Failed to allocate memory for ROM\n");
         goto close;
     }
+    printf("Allocated %d bytes of ROM\n", cart.num_rom_banks * ROM_BANK_SIZE);
 
     // read ROM
     rewind(file);
-    if (fread(cart.rom, 1, cart.rom_size, file) != cart.rom_size) {
+    if (fread(cart.rom, ROM_BANK_SIZE, cart.num_rom_banks, file) != cart.num_rom_banks) {
         perror("Failed to read ROM data\n");
         goto cleanup_rom;
     }
@@ -67,21 +164,56 @@ void load_rom(const char *filename) {
     }
 
     // allocate memory for RAM
-    cart.ram_size = ram_size_table[header.ram_size];
-    if (cart.ram_size > 0) {
-        cart.ram = malloc(cart.ram_size);
+    cart.num_ram_banks = ram_size_table[header.ram_size];
+    if (cart.num_ram_banks > 0) {
+        cart.ram = malloc(cart.num_ram_banks * RAM_BANK_SIZE);
         if (!cart.ram) {
             perror("Failed to allocate memory for RAM\n");
             goto cleanup_ram;
         }
+        printf("Allocated %d bytes of RAM\n", cart.num_ram_banks * RAM_BANK_SIZE);
     }
 
-    // everything has succeeded - hookup to bus
+    // hookup memory regions to bus
     bus.rom_0 = cart.rom;
-    bus.rom_1 = cart.rom + 0x4000;
-    if (cart.ram_size > 0 && cart.ram) {
-        bus.sram = cart.ram;
+    bus.rom_1 = cart.rom + ROM_BANK_SIZE;
+    bus.sram = cart.ram;
+
+    // configure memory bank controller (MBC)
+    if (header.cart_type == 0x00) {
+        // No MBC (ROM only)
+    } else if (header.cart_type <= 0x03) {
+        // MBC1
+        cart.mbc_type = MBC1;
+        cart.set_mbc_reg = mbc1_reg;
+        cart.read_ram = mbc_read_ram;
+        cart.write_ram = mbc_write_ram;
+    } else if (header.cart_type <= 0x06) {
+        // MBC2 (no external RAM)
+        cart.mbc_type = MBC2;
+        cart.rom_bank = 1;
+        cart.set_mbc_reg = mbc2_reg;
+        cart.read_ram = mbc2_read_ram;
+        cart.write_ram = mbc2_write_ram;
+    } else if (header.cart_type <= 0x09) {
+        // No MBC (ROM + RAM)
+    } else if (header.cart_type <= 0x0D) {
+        // MMM01 (Not implemented)
+    } else if (header.cart_type <= 0x13) {
+        // MBC3
+        cart.mbc_type = MBC3;
+        cart.set_mbc_reg = mbc3_reg;
+        cart.read_ram = mbc_read_ram;
+        cart.write_ram = mbc_write_ram;
+    } else if (header.cart_type <= 0x1E) {
+        // MBC5
+        cart.mbc_type = MBC5;
+        cart.set_mbc_reg = mbc5_reg;
+        cart.read_ram = mbc_read_ram;
+        cart.write_ram = mbc_write_ram;
     }
+
+    // everything has succeeded - return to skip cleanup
     return;
 
 // NOTE: use of labels and goto statements is generally discouraged, but it
@@ -90,11 +222,9 @@ void load_rom(const char *filename) {
 cleanup_ram:
     free(cart.ram);
     cart.ram = NULL;
-    cart.ram_size = 0;
 cleanup_rom:
     free(cart.rom);
     cart.rom = NULL;
-    cart.rom_size = 0;
 close:
     fclose(file);
 }

@@ -7,7 +7,6 @@
 #include "mem.h"
 #include "ppu.h"
 #include "timer.h"
-#include "util.h"
 
 union cpu cpu = {0};
 bool interrupt_master_enabled = false;

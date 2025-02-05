@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "cart.h"
 #include "dma.h"
 #include "io.h"
 #include "mem.h"
@@ -53,7 +54,9 @@ u8 mem_read(u16 addr) {
     } else if (addr < 0xA000) {
         value = bus.vram[addr - 0x8000];
     } else if (addr < 0xC000) {
-        value = bus.sram[addr - 0xA000];
+        if (bus.sram && cart.ram_enable) {
+            value = cart.read_ram(addr - 0xA000);
+        }
     } else if (addr < 0xD000) {
         value = bus.wram_0[addr - 0xC000];
     } else if (addr < 0xE000) {
@@ -87,14 +90,16 @@ u8 mem_read(u16 addr) {
 }
 
 void mem_write(u16 addr, u8 value) {
-    if (addr < 0x4000) {
-        // bus.rom_0[addr] = value;
-    } else if (addr < 0x8000) {
-        // bus.rom_1[addr - 0x4000] = value;
+    if (addr < 0x8000) {
+        if (cart.set_mbc_reg) {
+            cart.set_mbc_reg(addr, value);
+        }
     } else if (addr < 0xA000) {
         bus.vram[addr - 0x8000] = value;
     } else if (addr < 0xC000) {
-        bus.sram[addr - 0xA000] = value;
+        if (bus.sram && cart.ram_enable) {
+            cart.write_ram(addr - 0xA000, value);
+        }
     } else if (addr < 0xD000) {
         bus.wram_0[addr - 0xC000] = value;
     } else if (addr < 0xE000) {
