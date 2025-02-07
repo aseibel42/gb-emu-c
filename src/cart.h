@@ -61,3 +61,7 @@ extern Cart cart;
 void cart_load(char *filename);
 void cart_battery_load();
 void cart_battery_save();
+void get_stem(char *path);
+
+extern char stem[256];
+extern char save[256];

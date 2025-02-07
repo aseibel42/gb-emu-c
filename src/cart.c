@@ -1,4 +1,3 @@
-#include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,7 +6,8 @@
 #include "mem.h"
 
 Cart cart = {0};
-static char save_path[256];
+char stem[256];
+char save[256];
 
 // RAM size lookup table
 static const size_t ram_size_table[] = {
@@ -116,8 +116,9 @@ void mbc5_reg(u16 addr, u8 value) {
 }
 
 void cart_load(char *filename) {
-    cart.name = basename(filename);
-    sprintf(save_path, "save/%s.bin", cart.name);
+    get_stem(filename);
+    cart.name = stem;
+    sprintf(save, "save/%s.bin", cart.name);
     printf("Loading ROM: %s\n", cart.name);
 
     // read file
@@ -235,8 +236,31 @@ close:
     fclose(file);
 }
 
+void get_stem(char* path) {
+    // Find the last occurrence of "/"
+    char *dir_pos = strrchr(path, '/');
+
+    // Filename begins after the slash
+    const char *filename = dir_pos ? dir_pos + 1 : path;
+
+    // Find the last occurrence of "."
+    const char *ext_pos = strrchr(path, '.');
+
+    // Calculate the length of the stem
+    size_t stem_length = ext_pos ? (size_t)(ext_pos - filename) : strlen(filename);
+
+    // Copy the stem to the output buffer safely
+    if (stem_length >= 255) {
+        fprintf(stderr, "Buffer too small for stem\n");
+        return;
+    }
+
+    strncpy(stem, filename, stem_length);
+    stem[stem_length] = '\0'; // Null-terminate the string
+}
+
 void cart_battery_load() {
-    FILE *file = fopen(save_path, "rb");
+    FILE *file = fopen(save, "rb");
 
     if (!file) {
         printf("Failed to open battery save\n");
@@ -249,7 +273,7 @@ void cart_battery_load() {
 
 void cart_battery_save() {
 
-    FILE *file = fopen(save_path, "wb");
+    FILE *file = fopen(save, "wb");
 
     if (!file) {
         printf("Failed to open battery save\n");
