@@ -144,6 +144,7 @@ void ppu_draw_line() {
         }
 
         // window
+        win_test_y = io.lcd_y >= io.win_y;
         if (io.lcdc.win_enable && win_test_y && io.win_x < 167) {
             u8 win_row_y = win_y & 7;
             u8 win_tile_y = win_y / 8;
@@ -288,7 +289,6 @@ void ppu_end_line() {
     if (io.lcdc.win_enable && win_test_y && io.win_x < 167) {
         win_y++;
     }
-    win_test_y = io.lcd_y >= io.win_y;
 
     bool match = io.lcd_y == io.lcd_y_compare;
     if (match && io.stat.lcd_y_int) {
