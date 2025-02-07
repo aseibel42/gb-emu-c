@@ -13,6 +13,9 @@ obj/
 # Logs
 log/
 
+# Saves
+save/
+
 # Platform-dependent
 lib/
 
