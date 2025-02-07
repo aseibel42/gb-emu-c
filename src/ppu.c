@@ -199,8 +199,9 @@ void ppu_draw_line() {
 
             obj_attr sprite = ((obj_attr*)bus.oam)[info.index];
 
-            i8 obj_tile_x = (info.x_pos - 8) / 8;
+            u8 obj_tile_x = info.x_pos / 8;
             u8 obj_offset_x = info.x_pos & 7;
+            obj_tile_x -= !obj_offset_x;
 
             u8 obj_row_y = io.lcd_y + 16 - sprite.y_pos;
             obj_row_y ^= -sprite.y_flip;
@@ -228,18 +229,18 @@ void ppu_draw_line() {
             if (obj_offset_x) {
                 u16_bytes mask_bytes = u16_to_bytes(mask << (8 - obj_offset_x));
 
-                if (obj_tile_x >= 0) {
-                    blend(&color_0[obj_tile_x], color_lsb >> obj_offset_x, mask_bytes.hi);
-                    blend(&color_1[obj_tile_x], color_msb >> obj_offset_x, mask_bytes.hi);
-                    blend(&source_0[obj_tile_x], source_lsb >> obj_offset_x, mask_bytes.hi);
-                    blend(&source_1[obj_tile_x], source_msb >> obj_offset_x, mask_bytes.hi);
+                if (obj_tile_x > 0) {
+                    blend(&color_0[obj_tile_x-1], color_lsb >> obj_offset_x, mask_bytes.hi);
+                    blend(&color_1[obj_tile_x-1], color_msb >> obj_offset_x, mask_bytes.hi);
+                    blend(&source_0[obj_tile_x-1], source_lsb >> obj_offset_x, mask_bytes.hi);
+                    blend(&source_1[obj_tile_x-1], source_msb >> obj_offset_x, mask_bytes.hi);
                 }
 
-                if (obj_tile_x+1 < TILES_PER_LINE) {
-                    blend(&color_0[obj_tile_x+1], color_lsb << (8 - obj_offset_x), mask_bytes.lo);
-                    blend(&color_1[obj_tile_x+1], color_msb << (8 - obj_offset_x), mask_bytes.lo);
-                    blend(&source_0[obj_tile_x+1], source_lsb << (8 - obj_offset_x), mask_bytes.lo);
-                    blend(&source_1[obj_tile_x+1], source_msb << (8 - obj_offset_x), mask_bytes.lo);
+                if (obj_tile_x < TILES_PER_LINE) {
+                    blend(&color_0[obj_tile_x], color_lsb << (8 - obj_offset_x), mask_bytes.lo);
+                    blend(&color_1[obj_tile_x], color_msb << (8 - obj_offset_x), mask_bytes.lo);
+                    blend(&source_0[obj_tile_x], source_lsb << (8 - obj_offset_x), mask_bytes.lo);
+                    blend(&source_1[obj_tile_x], source_msb << (8 - obj_offset_x), mask_bytes.lo);
                 }
             } else {
                 blend(&color_0[obj_tile_x], color_lsb, mask);
