@@ -53,7 +53,11 @@ typedef struct {
     u8 ram_bank;
     bool ram_enable;
     bool mbc_mode;
+    char *name;
 } Cart;
 
 extern Cart cart;
-void load_rom(const char *filename);
+
+void cart_load(char *filename);
+void cart_battery_load();
+void cart_battery_save();

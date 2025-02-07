@@ -1,5 +1,7 @@
+#include <SDL2/SDL_scancode.h>
 #include <stdio.h>
 
+#include "cart.h"
 #include "emu.h"
 #include "io.h"
 #include "mem.h"
@@ -226,8 +228,14 @@ void ui_handle_events() {
     SDL_Event e;
     while (SDL_PollEvent(&e) > 0) {
         if (e.type == SDL_KEYDOWN || e.type == SDL_KEYUP) {
-            printf("KEY EVENT: %d\n", e.key.state);
             ui_on_key(e.key.keysym.sym, !e.key.state);
+        }
+
+        if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_b) {
+            const u8* keyboard_state = SDL_GetKeyboardState(0);
+            if (keyboard_state[SDL_SCANCODE_RCTRL] || keyboard_state[SDL_SCANCODE_LCTRL]) {
+                cart_battery_save();
+            }
         }
 
         if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_CLOSE) {

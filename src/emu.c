@@ -14,7 +14,7 @@ static bool quit = false;
 // Global thread synchronization
 pthread_mutex_t cpu_lock, ui_lock;
 pthread_cond_t cpu_cond, ui_cond;
-int frames = CPU_SPEED;
+int frames_queued = CPU_SPEED;
 
 void* cpu_process(void* ptr) {
 
@@ -23,7 +23,7 @@ void* cpu_process(void* ptr) {
     while (!quit) {
         // Wait for the UI to render a frame
         pthread_mutex_lock(&ui_lock);
-        while (!quit && frames >= CPU_SPEED) {
+        while (!quit && frames_queued >= CPU_SPEED) {
             pthread_cond_wait(&ui_cond, &ui_lock);
         }
         pthread_mutex_unlock(&ui_lock);
@@ -34,7 +34,7 @@ void* cpu_process(void* ptr) {
         }
 
         // Signal that CPU is finished with this frame
-        frames++;
+        frames_queued++;
         pthread_mutex_lock(&cpu_lock);
         pthread_cond_signal(&cpu_cond);
         pthread_mutex_unlock(&cpu_lock);
@@ -49,12 +49,14 @@ void* cpu_process(void* ptr) {
 }
 
 void emu_run(char* filename) {
-    load_rom(filename);
+    cart_load(filename);
 
     cpu_init();
     io_init();
     ppu_init();
     mem_init();
+
+    cart_battery_load();
 
     // Initialize mutexes and condition variables
     pthread_mutex_init(&cpu_lock, NULL);
@@ -72,7 +74,7 @@ void emu_run(char* filename) {
     ui_init();
 
     // Signal that UI has initialized
-    frames = 0;
+    frames_queued = 0;
     pthread_mutex_lock(&ui_lock);
     pthread_cond_signal(&ui_cond);
     pthread_mutex_unlock(&ui_lock);
@@ -84,14 +86,14 @@ void emu_run(char* filename) {
 
         // Wait for CPU
         pthread_mutex_lock(&cpu_lock);
-        while (!quit && frames < CPU_SPEED) {
+        while (!quit && frames_queued < CPU_SPEED) {
             pthread_cond_wait(&cpu_cond, &cpu_lock);
         }
         pthread_mutex_unlock(&cpu_lock);
 
         // Update UI and limit FPS
         ui_request_frame();
-        frames = 0;
+        frames_queued = 0;
 
         // Signal that UI has finished updating
         pthread_mutex_lock(&ui_lock);

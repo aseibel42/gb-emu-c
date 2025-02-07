@@ -1,10 +1,13 @@
+#include <libgen.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "cart.h"
 #include "mem.h"
 
 Cart cart = {0};
+static char save_path[256];
 
 // RAM size lookup table
 static const size_t ram_size_table[] = {
@@ -112,8 +115,10 @@ void mbc5_reg(u16 addr, u8 value) {
     }
 }
 
-void load_rom(const char *filename) {
-    printf("Loading ROM: %s\n", filename);
+void cart_load(char *filename) {
+    cart.name = basename(filename);
+    sprintf(save_path, "save/%s.bin", cart.name);
+    printf("Loading ROM: %s\n", cart.name);
 
     // read file
     FILE *file = fopen(filename, "rb");
@@ -134,6 +139,7 @@ void load_rom(const char *filename) {
         perror("Failed to read ROM header\n");
         goto close;
     }
+    printf("Title: %.*s\n", 16, header.title);
 
     // validate ROM size
     if (header.rom_size > 8) {
@@ -148,7 +154,7 @@ void load_rom(const char *filename) {
         perror("Failed to allocate memory for ROM\n");
         goto close;
     }
-    printf("Allocated %d bytes of ROM\n", cart.num_rom_banks * ROM_BANK_SIZE);
+    printf("ROM: %d bytes\n", cart.num_rom_banks * ROM_BANK_SIZE);
 
     // read ROM
     rewind(file);
@@ -171,7 +177,7 @@ void load_rom(const char *filename) {
             perror("Failed to allocate memory for RAM\n");
             goto cleanup_ram;
         }
-        printf("Allocated %d bytes of RAM\n", cart.num_ram_banks * RAM_BANK_SIZE);
+        printf("RAM: %d bytes\n", cart.num_ram_banks * RAM_BANK_SIZE);
     }
 
     // hookup memory regions to bus
@@ -227,4 +233,31 @@ cleanup_rom:
     cart.rom = NULL;
 close:
     fclose(file);
+}
+
+void cart_battery_load() {
+    FILE *file = fopen(save_path, "rb");
+
+    if (!file) {
+        printf("Failed to open battery save\n");
+        return;
+    }
+
+    fread(bus.sram, RAM_BANK_SIZE, cart.num_ram_banks, file);
+    fclose(file);
+}
+
+void cart_battery_save() {
+
+    FILE *file = fopen(save_path, "wb");
+
+    if (!file) {
+        printf("Failed to open battery save\n");
+        return;
+    }
+
+    fwrite(bus.sram, RAM_BANK_SIZE, cart.num_ram_banks, file);
+    fclose(file);
+
+    printf("Save\n");
 }
