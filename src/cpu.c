@@ -1,6 +1,5 @@
 #include "cpu.h"
 #include "debug.h"
-#include "dma.h"
 #include "instruction.h"
 #include "interrupt.h"
 #include "io.h"

@@ -22,3 +22,6 @@ void mem_write(u16 addr, u8 value);
 
 u16 mem_read16(u16 addr);
 void mem_write16(u16 addr, u16 value);
+
+void dma_start(u8 source_addr);
+void dma_tick();
