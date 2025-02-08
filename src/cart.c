@@ -267,7 +267,7 @@ void cart_battery_load() {
         return;
     }
 
-    fread(bus.sram, RAM_BANK_SIZE, cart.num_ram_banks, file);
+    fread(cart.ram, RAM_BANK_SIZE, cart.num_ram_banks, file);
     fclose(file);
 }
 
@@ -280,7 +280,7 @@ void cart_battery_save() {
         return;
     }
 
-    fwrite(bus.sram, RAM_BANK_SIZE, cart.num_ram_banks, file);
+    fwrite(cart.ram, RAM_BANK_SIZE, cart.num_ram_banks, file);
     fclose(file);
 
     printf("Save\n");
