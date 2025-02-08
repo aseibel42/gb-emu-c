@@ -10,11 +10,14 @@
 #include "ui.h"
 
 static bool quit = false;
+static int cpu_speed = 1;
+static bool cpu_speed_up_flag = false;
+static bool cpu_speed_down_flag = false;
 
 // Global thread synchronization
 pthread_mutex_t cpu_lock, ui_lock;
 pthread_cond_t cpu_cond, ui_cond;
-int frames_queued = CPU_SPEED;
+int frames_queued = 1;
 
 void* cpu_process(void* ptr) {
 
@@ -23,7 +26,7 @@ void* cpu_process(void* ptr) {
     while (!quit) {
         // Wait for the UI to render a frame
         pthread_mutex_lock(&ui_lock);
-        while (!quit && frames_queued >= CPU_SPEED) {
+        while (!quit && frames_queued >= cpu_speed) {
             pthread_cond_wait(&ui_cond, &ui_lock);
         }
         pthread_mutex_unlock(&ui_lock);
@@ -86,7 +89,7 @@ void emu_run(char* filename) {
 
         // Wait for CPU
         pthread_mutex_lock(&cpu_lock);
-        while (!quit && frames_queued < CPU_SPEED) {
+        while (!quit && frames_queued < cpu_speed) {
             pthread_cond_wait(&cpu_cond, &cpu_lock);
         }
         pthread_mutex_unlock(&cpu_lock);
@@ -94,6 +97,18 @@ void emu_run(char* filename) {
         // Update UI and limit FPS
         ui_request_frame();
         frames_queued = 0;
+
+        // Update CPU speed
+        if (cpu_speed_down_flag) {
+            cpu_speed -= cpu_speed > 0;
+            printf("CPU Speed: %i\n", cpu_speed);
+            cpu_speed_down_flag = false;
+        }
+        if (cpu_speed_up_flag) {
+            cpu_speed += cpu_speed < 8;
+            printf("CPU Speed: %i\n", cpu_speed);
+            cpu_speed_up_flag = false;
+        }
 
         // Signal that UI has finished updating
         pthread_mutex_lock(&ui_lock);
@@ -112,4 +127,12 @@ void emu_run(char* filename) {
 // Called when window is closed
 void emu_exit() {
     quit = true;
+}
+
+void emu_speed_up() {
+    cpu_speed_up_flag = true;
+}
+
+void emu_speed_down() {
+    cpu_speed_down_flag = true;
 }

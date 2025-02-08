@@ -231,10 +231,17 @@ void ui_handle_events() {
             ui_on_key(e.key.keysym.sym, !e.key.state);
         }
 
-        if (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_b) {
-            const u8* keyboard_state = SDL_GetKeyboardState(0);
-            if (keyboard_state[SDL_SCANCODE_RCTRL] || keyboard_state[SDL_SCANCODE_LCTRL]) {
-                cart_battery_save();
+        const u8* keyboard_state = SDL_GetKeyboardState(0);
+        if (keyboard_state[SDL_SCANCODE_RCTRL] || keyboard_state[SDL_SCANCODE_LCTRL]) {
+            // if (keyboard_state[SDL_SCANCODE_RSHIFT] || keyboard_state[SDL_SCANCODE_LSHIFT])
+            if (e.type == SDL_KEYUP) {
+                if (e.key.keysym.sym == SDLK_b) {
+                    cart_battery_save();
+                } else if (e.key.keysym.sym == SDLK_COMMA) {
+                    emu_speed_down();
+                } else if (e.key.keysym.sym == SDLK_PERIOD) {
+                    emu_speed_up();
+                }
             }
         }
 
