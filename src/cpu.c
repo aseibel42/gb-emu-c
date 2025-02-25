@@ -28,24 +28,9 @@ void cpu_init() {
 
     halted = false;
     interrupt_master_enabled = false;
-
-    // Setup log file (gameboy doctor)
-    // FILE *fp = fopen("log/cpu_instrs_02.txt", "w");
-    // if (!fp) {
-    //     printf("Failed to open file\n");
-    //     return ptr;
-    // }
 }
 
 bool cpu_step() {
-    // (gameboy doctor):
-    // fprintf(
-    //     fp,
-    //     "A:%02x F:%02x B:%02x C:%02x D:%02x E:%02x H:%02x L:%02x SP:%04x PC:%04x PCMEM:%02x,%02x,%02x,%02x\n",
-    //     cpu.reg.a, cpu.reg.f, cpu.reg.b, cpu.reg.c, cpu.reg.d, cpu.reg.e, cpu.reg.h, cpu.reg.l, cpu.reg.sp, cpu.reg.pc,
-    //     mem[cpu.reg.pc], mem[cpu.reg.pc + 1], mem[cpu.reg.pc + 2], mem[cpu.reg.pc + 3]
-    // );
-
     if (!halted) {
         // fetch instruction
         u8 opcode = cpu_fetch();
@@ -153,26 +138,26 @@ void set_flags(i8 z, i8 n, i8 h, i8 c) {
     if (c != -1) cpu.flag.c = c;
 }
 
-bool interrupt_check(u8 interrupt_type) {
-    // An interrupt is executed only if enabled (IE) and requested (IF)
-    bool interrupt_pending = bit_read(io.ie_reg & io.if_reg, interrupt_type);
+u16 cpu_handle_interrupts() {
+    u8 interrupt_signal = (io.ie_reg & io.if_reg) | 0b11100000;
+    u8 pending_interrupt = __builtin_ctz(interrupt_signal);
 
-    if (interrupt_pending) {
+    if (pending_interrupt < 5) {
         // acknowledge interrupt by clearing corresponding bit in IF register
-        io.if_reg = bit_clear(io.if_reg, interrupt_type);
+        io.if_reg = bit_clear(io.if_reg, pending_interrupt);
         halted = false;
         interrupt_master_enabled = false;
+
+        switch (pending_interrupt) {
+            case 0: return 0x40;
+            case 1: return 0x48;
+            case 2: return 0x50;
+            case 3: return 0x58;
+            case 4: return 0x60;
+        }
     }
 
-    return interrupt_pending;
-}
-
-u16 cpu_handle_interrupts() {
-    if (interrupt_check(INTERRUPT_VBLANK)) return ADDR_VBLANK;
-    if (interrupt_check(INTERRUPT_LCD_STAT)) return ADDR_LCD_STAT;
-    if (interrupt_check(INTERRUPT_TIMER)) return ADDR_TIMER;
-    if (interrupt_check(INTERRUPT_SERIAL)) return ADDR_SERIAL;
-    if (interrupt_check(INTERRUPT_JOYPAD)) return ADDR_JOYPAD;
+    // No interrupt
     return 0;
 }
 
