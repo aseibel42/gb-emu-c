@@ -7,6 +7,7 @@
 #include "io.h"
 #include "mem.h"
 #include "ppu.h"
+#include "apu.h"
 #include "ui.h"
 
 static bool quit = false;
@@ -57,6 +58,7 @@ void emu_run(char* filename) {
     cpu_init();
     io_init();
     ppu_init();
+    apu_init();
     mem_init();
 
     cart_battery_load();

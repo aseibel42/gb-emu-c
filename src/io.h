@@ -59,6 +59,66 @@ typedef union {
     u8 value;
 } lcd_stat;
 
+// Flags of ch2 volume register
+typedef union {
+    struct {
+        u8 pace : 3;
+        u8 dir : 1;
+        u8 init_vol : 4;
+    };
+    u8 value;
+} ch_vol;
+
+// Flags of ch2 ctrl register
+typedef union {
+    struct {
+        u8 period : 3;
+        u8 : 3;
+        u8 length_enable : 1;
+        u8 trigger : 1;
+    };
+    u8 value;
+} ch_ctrl;
+
+// Flags of audio volume register
+typedef union {
+    struct {
+        u8 vol_right : 3;
+        u8 vin_right : 1;
+        u8 vol_left : 3;
+        u8 vin_left : 1;
+    };
+    u8 value;
+} audio_vol;
+
+// Flags of audio pan register
+typedef union {
+    struct {
+        u8 ch1_right : 1;
+        u8 ch2_right : 1;
+        u8 ch3_right : 1;
+        u8 ch4_right : 1;
+        u8 ch1_left : 1;
+        u8 ch2_left : 1;
+        u8 ch3_left : 1;
+        u8 ch4_left : 1;
+    };
+    u8 value;
+} audio_pan;
+
+// Flags of audio ctrl register
+typedef union {
+    struct {
+        u8 ch1_enable : 1;
+        u8 ch2_enable : 1;
+        u8 ch3_enable : 1;
+        u8 ch4_enable : 1;
+        u8 : 3;
+        u8 master_enable : 1;
+    };
+    u8 value;
+} audio_ctrl;
+
 // Contains hardware registers and High RAM (hram)
 // Padding added to match layout of 256-byte zero page (bus.page_0)
 struct io {
@@ -80,7 +140,31 @@ struct io {
     u8 if_reg; // 0xFF0F
 
     // audio
-    u8 audio[0x20]; // 0xFF10
+    u8 ch1_sweep; // 0xFF10
+    u8 ch1_len; // 0xFF11
+    u8 ch1_vol; // 0xFF12
+    u8 ch1_freq; // 0xFF13
+    u8 ch1_ctrl; // 0xFF14
+    u8 ch2_sweep; // 0xFF15 - Not used
+    u8 ch2_len; // 0xFF16
+    ch_vol ch2_vol; // 0xFF17
+    u8 ch2_freq; // 0xFF18
+    ch_ctrl ch2_ctrl; // 0xFF19
+    u8 ch3_sweep; // 0xFF1a - Not used
+    u8 ch3_len; // 0xFF1b
+    u8 ch3_vol; // 0xFF1c
+    u8 ch3_freq; // 0xFF1d
+    u8 ch3_ctrl; // 0xFF1e
+    u8 ch4_sweep; // 0xFF1f - Not used
+    u8 ch4_len; // 0xFF20
+    u8 ch4_vol; // 0xFF21
+    u8 ch4_freq; // 0xFF22
+    u8 ch4_ctrl; // 0xFF23
+    audio_vol master_vol; // 0xFF24
+    audio_pan master_pan; // 0xFF25
+    audio_ctrl master_ctrl; // 0xFF26
+    u8 audio_padding[9];
+
     u8 wave[0x10]; // 0xFF30
 
     // lcd

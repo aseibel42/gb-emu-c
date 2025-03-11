@@ -1,9 +1,12 @@
+// #include <stdio.h>
+
 #include "cpu.h"
 #include "debug.h"
 #include "instruction.h"
 #include "interrupt.h"
 #include "io.h"
 #include "mem.h"
+#include "apu.h"
 #include "ppu.h"
 #include "timer.h"
 
@@ -49,6 +52,8 @@ bool cpu_step() {
     if (!halted) {
         // fetch instruction
         u8 opcode = cpu_fetch();
+        // debug_registers();
+        // getchar();
 
         // execute instruction
         op[opcode]();
@@ -81,6 +86,7 @@ void cpu_cycle() {
         timer_tick();
         ppu_tick();
     }
+    apu_tick();
     dma_tick();
 }
 

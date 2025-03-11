@@ -3,6 +3,7 @@
 
 #include "cart.h"
 #include "io.h"
+#include "apu.h"
 #include "mem.h"
 
 Bus bus = {};
@@ -124,6 +125,25 @@ void mem_write(u16 addr, u8 value) {
         } else if (addr == 0xFF04) {
             // Writing anything to DIV register resets it to 0
             io.div = 0;
+        } else if (addr == 0xFF16) { // ch2 len
+            // set current_len to initial value;
+            io.ch2_len = value;
+            apu_set_len();
+        } else if (addr == 0xFF17) { // ch2 vol
+            io.ch2_vol.value = value;
+
+            // dac gets disabled if upper 5 bits of NR22 are all 0
+            apu_set_ch2_dac_enabled((value & 0xF8) != 0);
+
+            // set ch2_current_volume to this register's init vol
+            apu_set_cur_vol(); 
+        } else if (addr == 0xFF19) { // ctrl
+            io.ch2_ctrl.value = value;
+
+            // if bit 7 of ch2_ctrl reg gets sit, then call trigger()
+            if(io.ch2_ctrl.trigger) {
+                ch2_trigger();
+            }
         } else if (addr == 0xFF46) {
             // Writing anything to DMA register starts a DMA transfer to OAM
             io.dma = value;
