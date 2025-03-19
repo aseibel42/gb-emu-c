@@ -126,8 +126,9 @@ void mem_write(u16 addr, u8 value) {
             // Writing anything to DIV register resets it to 0
             io.div = 0;
         } else if (addr == 0xFF16) { // ch2 len
-            // set current_len to initial value;
+            // write to ch2 length register
             io.ch2_len = value;
+            // set current_len to initial value (wave pattern is read in generate audio function)
             apu_set_len();
         } else if (addr == 0xFF17) { // ch2 vol
             io.ch2_vol.value = value;
@@ -135,11 +136,16 @@ void mem_write(u16 addr, u8 value) {
             // dac gets disabled if upper 5 bits of NR22 are all 0
             apu_set_ch2_dac_enabled((value & 0xF8) != 0);
 
+            // enable ch2 vol envelope if pace > 0
+            apu_set_ch2_env_enabled(io.ch2_vol.pace);
+
+            // set ch2 vol envelope counter to 0
+            apu_reset_ch2_env_counter();
+
             // set ch2_current_volume to this register's init vol
             apu_set_cur_vol(); 
-        } else if (addr == 0xFF19) { // ctrl
+        } else if (addr == 0xFF19) { // ch2 ctrl
             io.ch2_ctrl.value = value;
-
             // if bit 7 of ch2_ctrl reg gets sit, then call trigger()
             if(io.ch2_ctrl.trigger) {
                 ch2_trigger();

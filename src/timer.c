@@ -5,15 +5,17 @@
 #include "util.h"
 
 u16 ticks = 0;
+u16 prev_div = 0;
 
 void timer_tick() {
     ticks++;
     io.div = u16_to_bytes(ticks).hi;
 
     // if 6th bit of div flips, then tick the apu's frame sequence counter
-    if ((io.div & 0x1F) == 0) {
+    if (((prev_div & 0x20) == 0 && (io.div & 0x20) != 0) || ((prev_div & 0x20) == 0 && (io.div & 0x20) != 0)) {
         frame_sequence_tick();
     }
+    prev_div = io.div;
 
     // tima is incremented when:
     // 1) 3rd bit of tac is set AND

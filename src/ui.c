@@ -6,6 +6,10 @@
 #include "io.h"
 #include "mem.h"
 #include "ui.h"
+#include "apu.h"
+
+#define AUDIO_WINDOW_WIDTH 800
+#define AUDIO_WINDOW_HEIGHT 400
 
 static SDL_Window *sdlWindow;
 static SDL_Renderer *sdlRenderer;
@@ -26,6 +30,10 @@ static SDL_Window *sdlTilemapWindow2;
 static SDL_Renderer *sdlTilemapRenderer2;
 static SDL_Texture *sdlTilemapTexture2;
 static SDL_Surface *sdlTilemapSurface2;
+
+SDL_Window* audioWindow = NULL;
+SDL_Renderer* audioRenderer = NULL;
+extern float* target_sample_buffer;
 
 static u32 elapsed = 0;
 static const float min_frame_duration_ms = 1000.0f / MAX_FPS;
@@ -179,6 +187,9 @@ void ui_init() {
 
     SDL_SetWindowPosition(sdlTilemapWindow2, x + width + 10, y);
 
+    audioWindow = SDL_CreateWindow("Audio Waveform", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, AUDIO_WINDOW_WIDTH, AUDIO_WINDOW_HEIGHT, SDL_WINDOW_SHOWN);
+    audioRenderer = SDL_CreateRenderer(audioWindow, -1, SDL_RENDERER_ACCELERATED);
+
 }
 
 void ui_on_key(SDL_Keycode key_code, u8 state) {
@@ -254,9 +265,10 @@ void ui_handle_events() {
 void ui_request_frame() {
     // Copy image from CPU to GPU
     SDL_UpdateTexture(sdlTexture, 0, sdlSurface->pixels, sdlSurface->pitch);
-    ui_update_debug_window();
-    ui_update_tilemap_window(sdlTilemapSurface, sdlTilemapRenderer, sdlTilemapTexture, TILEMAP1_START_ADDR);
-    ui_update_tilemap_window(sdlTilemapSurface2, sdlTilemapRenderer2, sdlTilemapTexture2, TILEMAP2_START_ADDR);
+    // ui_update_debug_window();
+    // ui_update_tilemap_window(sdlTilemapSurface, sdlTilemapRenderer, sdlTilemapTexture, TILEMAP1_START_ADDR);
+    // ui_update_tilemap_window(sdlTilemapSurface2, sdlTilemapRenderer2, sdlTilemapTexture2, TILEMAP2_START_ADDR);
+    ui_update_audio_window();
 
     // Cap framerate to 60fps
     int delay = min_frame_duration_ms + elapsed - SDL_GetTicks();
@@ -370,4 +382,30 @@ void ui_update_tilemap_window(SDL_Surface *_surface, SDL_Renderer *_renderer, SD
     SDL_RenderClear(_renderer);
     SDL_RenderCopy(_renderer, _texture, NULL, NULL);
     SDL_RenderPresent(_renderer);
+}
+
+void ui_update_audio_window() {
+    SDL_SetRenderDrawColor(audioRenderer, 0, 0, 0, 255);  // Black background
+    SDL_RenderClear(audioRenderer);
+
+    SDL_SetRenderDrawColor(audioRenderer, 0, 255, 0, 255);  // Green for waveform
+
+    int mid_y_left = AUDIO_WINDOW_HEIGHT / 4;   // Middle of top half (left channel)
+    int mid_y_right = (3 * AUDIO_WINDOW_HEIGHT) / 4;  // Middle of bottom half (right channel)
+
+    for (int i = 0; i < 803 - 1; i++) {
+        int x1 = (i * AUDIO_WINDOW_WIDTH) / 803;
+        int x2 = ((i + 1) * AUDIO_WINDOW_WIDTH) / 803;
+
+        int y1_left = mid_y_left - (target_sample_buffer[2 * i] * (AUDIO_WINDOW_HEIGHT / 4));
+        int y2_left = mid_y_left - (target_sample_buffer[2 * (i + 1)] * (AUDIO_WINDOW_HEIGHT / 4));
+
+        int y1_right = mid_y_right - (target_sample_buffer[2 * i + 1] * (AUDIO_WINDOW_HEIGHT / 4));
+        int y2_right = mid_y_right - (target_sample_buffer[2 * (i + 1) + 1] * (AUDIO_WINDOW_HEIGHT / 4));
+
+        SDL_RenderDrawLine(audioRenderer, x1, y1_left, x2, y2_left);   // Left channel
+        SDL_RenderDrawLine(audioRenderer, x1, y1_right, x2, y2_right); // Right channel
+    }
+
+    SDL_RenderPresent(audioRenderer);
 }

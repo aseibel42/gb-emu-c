@@ -11,7 +11,7 @@
 #include "ui.h"
 
 static bool quit = false;
-static int cpu_speed = 1;
+int cpu_speed = 1;
 static bool cpu_speed_up_flag = false;
 static bool cpu_speed_down_flag = false;
 
@@ -99,6 +99,10 @@ void emu_run(char* filename) {
         // Update UI and limit FPS
         ui_request_frame();
         frames_queued = 0;
+
+        // Resample and queue audio buffer
+        resample_audio();
+        queue_audio();
 
         // Update CPU speed
         if (cpu_speed_down_flag) {
