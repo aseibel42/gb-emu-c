@@ -22,10 +22,10 @@ bool ch2_env_enabled = false;
 
 // Audio buffer
 u16 source_buffer_count = 0;
-int target_frames = (SOURCE_BUFFER_SIZE * TARGET_SAMPLE_RATE) / SOURCE_SAMPLE_RATE;  
 u32 actual_target_frames;
 float* source_sample_buffer = NULL;
-float* target_sample_buffer = NULL;
+float* render_buffer = NULL;
+AudioBuffer target_buffer;
 
 // Audio device
 SDL_AudioSpec desired, obtained;
@@ -49,7 +49,7 @@ void apu_init() {
     desired.freq = TARGET_SAMPLE_RATE; // Modern audio devices run at 48,000 Hz
     desired.format = AUDIO_F32SYS; // 32 bit floats with system endianness
     desired.channels = 2; // 2-channel stereo (L, R, L, R ...)
-    desired.samples = target_frames; // Audio samples per frame at 48,000 Hz and 60 FPS
+    desired.samples = TARGET_FRAMES; // Audio samples per frame at 48,000 Hz and 60 FPS
     desired.callback = NULL;  // No callback, manual audio handling
 
     // Open audio device with desired settings, return error if it fails
@@ -61,7 +61,14 @@ void apu_init() {
 
     // Allocate heap memory for audio sample buffers
     source_sample_buffer = malloc(SOURCE_BUFFER_SIZE * 2 * sizeof(float)); // 4389 samples per frame, *2 for L and R
-    target_sample_buffer = malloc(target_frames * 2 * sizeof(float)); // ~803 samples per frame after resampling from 262144 to 48000 Hz
+    render_buffer = malloc(TARGET_FRAMES * 2 * sizeof(float));
+    AudioBuffer *target_buffer = malloc(sizeof(AudioBuffer)); // ~803 samples per frame after resampling from 262144 to 48000 Hz (store 2 frames worth)
+    if (!target_buffer) {
+        perror("Memory allocation failed");
+    }
+
+    // Zero out the target buffer
+    memset(target_buffer, 0, sizeof(AudioBuffer));
 
     // Unpause audio device
     SDL_PauseAudioDevice(dev, 0);
@@ -215,6 +222,9 @@ void generate_source_audio_samples() {
 
 // resample audio from source sample rate (262144 Hz) to sample rate of audio device (48000 Hz)
 void resample_audio() {
+    // Save new buffer as previous buffer for next iteration
+    memcpy(target_buffer.prev, target_buffer.new, sizeof(float) * TARGET_FRAMES * 2);
+
     // find number of source frames per target frame - (262144/48000 ~ 5.46)
     float step = (float)SOURCE_SAMPLE_RATE / TARGET_SAMPLE_RATE;
     
@@ -234,12 +244,19 @@ void resample_audio() {
         if (next_src_pos >= SOURCE_BUFFER_SIZE * 2) next_src_pos = src_pos;
 
         // calculate target samples
-        target_sample_buffer[2 * i] = source_sample_buffer[src_pos] * (1.0f - frac) + source_sample_buffer[next_src_pos] * frac;
-        target_sample_buffer[2 * i + 1] = source_sample_buffer[src_pos + 1] * (1.0f - frac) + source_sample_buffer[next_src_pos + 1] * frac;
-        
+        target_buffer.new[2 * i] = source_sample_buffer[src_pos] * (1.0f - frac) + source_sample_buffer[next_src_pos] * frac;
+        target_buffer.new[2 * i + 1] = source_sample_buffer[src_pos + 1] * (1.0f - frac) + source_sample_buffer[next_src_pos + 1] * frac;
+
         // increment index (location of target sample relative to source samples)
         index += step;
     }
+
+    // Find trigger in middle half of combined buffer
+    int trigger_index = find_trigger_point();
+
+    // Shift waveform to keep trigger centered
+    // This will update the audio render_buffer
+    shift_waveform(trigger_index);
 
     // Reset source sample buffer
     source_buffer_count = 0;
@@ -251,11 +268,33 @@ void queue_audio() {
  
     // If queue is too low, add some extra samples to prevent popping
     if (queued_audio_size < 4 * actual_target_frames * sizeof(float)) {
-        SDL_QueueAudio(dev, target_sample_buffer, actual_target_frames * 2 * sizeof(float));
+        SDL_QueueAudio(dev, target_buffer.new, actual_target_frames * 2 * sizeof(float));
     }
 
     // Add samples from buffer to audio queue (but not if queue is too large)
     if (queued_audio_size < 15 * actual_target_frames * sizeof(float)) {
-        SDL_QueueAudio(dev, target_sample_buffer, actual_target_frames * 2 * sizeof(float));
+        SDL_QueueAudio(dev, target_buffer.new, actual_target_frames * 2 * sizeof(float));
+    }
+}
+
+// Function to find trigger in middle half of combined buffer
+int find_trigger_point() {
+    float trigger_threshold = -1.0f;
+    int start = TARGET_FRAMES / 2;  // Middle of prev buffer
+    int end = TARGET_FRAMES + (TARGET_FRAMES / 2);  // Middle of new buffer
+    for (int i = end; i > start; i--) {
+        if (target_buffer.combined[i * 2] > trigger_threshold && target_buffer.combined[(i - 1) * 2] <= trigger_threshold) { // Zero-crossing (left channel)
+            return i;
+        }
+    }
+    return end; // Default: no trigger found, use end of middle section
+}
+
+// Function to shift buffer so trigger is centered
+void shift_waveform(int trigger_index) {   
+    int shift_amount = trigger_index - (TARGET_FRAMES / 2);
+    for (int i = 0; i < TARGET_FRAMES; i++) {
+        render_buffer[i * 2] = target_buffer.combined[(i + shift_amount) * 2];     // Left channel
+        render_buffer[i * 2 + 1] = target_buffer.combined[(i + shift_amount) * 2 + 1]; // Right channel
     }
 }

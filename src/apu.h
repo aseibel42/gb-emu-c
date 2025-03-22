@@ -5,6 +5,15 @@
 #define SOURCE_SAMPLE_RATE 262144  // High sample rate (Hz)
 #define TARGET_SAMPLE_RATE 48000   // Playback sample rate (Hz)
 #define SOURCE_BUFFER_SIZE 4389          // Number of source audio samples per frames
+#define TARGET_FRAMES ((SOURCE_BUFFER_SIZE * TARGET_SAMPLE_RATE) / SOURCE_SAMPLE_RATE)  
+
+typedef union {
+    struct {
+        float prev[TARGET_FRAMES * 2];
+        float new[TARGET_FRAMES * 2];
+    };
+    float combined[TARGET_FRAMES * 4];
+} AudioBuffer;
 
 // general
 void apu_init();
@@ -31,3 +40,5 @@ void generate_source_audio_samples();
 void resample_audio();
 void queue_audio();
 
+int find_trigger_point();
+void shift_waveform(int trigger_index);
