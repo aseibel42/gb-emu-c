@@ -293,7 +293,7 @@ void ppu_end_line() {
 
     bool match = io.lcd_y == io.lcd_y_compare;
     if (match && io.stat.lcd_y_int) {
-        cpu_request_interrupt(INTERRUPT_LCD_STAT);
+        cpu_request_interrupt(INTERRUPT_STAT);
     }
     io.stat.lcd_y_cmp = match;
 }
@@ -325,7 +325,7 @@ void ppu_mode_hblank() {
             io.stat.ppu_mode = PPU_MODE_VBLANK;
             cpu_request_interrupt(INTERRUPT_VBLANK);
             if (io.stat.vblank_int) {
-                cpu_request_interrupt(INTERRUPT_LCD_STAT);
+                cpu_request_interrupt(INTERRUPT_STAT);
             }
         } else {
             io.stat.ppu_mode = PPU_MODE_OAM;
