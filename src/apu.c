@@ -265,16 +265,20 @@ void resample_audio() {
 void queue_audio() {    
     // Get size of already-queued audio samples
     u32 queued_audio_size = SDL_GetQueuedAudioSize(dev);
+    // printf("size: %d\n",queued_audio_size);
  
     // If queue is too low, add some extra samples to prevent popping
-    if (queued_audio_size < 4 * actual_target_frames * sizeof(float)) {
+    if (queued_audio_size < 2 * 2 * actual_target_frames * sizeof(float)) {
         SDL_QueueAudio(dev, target_buffer.new, actual_target_frames * 2 * sizeof(float));
     }
 
     // Add samples from buffer to audio queue (but not if queue is too large)
-    if (queued_audio_size < 15 * actual_target_frames * sizeof(float)) {
-        SDL_QueueAudio(dev, target_buffer.new, actual_target_frames * 2 * sizeof(float));
+    while (SDL_GetQueuedAudioSize(dev) > 4 * 2 * actual_target_frames * sizeof(float)) {
+        SDL_Delay(1);
+        // printf("Delay 1 ms---------------------------------\n");
     }
+
+    SDL_QueueAudio(dev, target_buffer.new, actual_target_frames * 2 * sizeof(float));
 }
 
 // Function to find trigger in middle half of combined buffer
