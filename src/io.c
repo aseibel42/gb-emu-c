@@ -42,9 +42,9 @@ void io_init() {
     // -- Audio --
     io.ch1_sweep = 0x80;
     io.ch1_len = 0xBF;
-    io.ch1_vol = 0xF3;
+    io.ch1_vol.value = 0xF3;
     io.ch1_freq = 0xFF;
-    io.ch1_ctrl = 0xBF;
+    io.ch1_ctrl.value = 0xBF;
     io.ch2_len = 0x3F;
     io.ch2_vol.value = 0x00;
     io.ch2_freq = 0xFF;

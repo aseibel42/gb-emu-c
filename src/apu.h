@@ -28,11 +28,20 @@ void sweep_tick();
 
 u8 apu_get_wave_bit(u8 wave_pattern, u8 wave_bit);
 
+// ch1
+void ch1_trigger();
+void ch1_apu_set_period();
+void ch1_apu_set_cur_vol();
+void ch1_apu_set_len();
+void apu_set_ch1_dac_enabled(bool flag);
+void apu_set_ch1_env_enabled(bool flag);
+void apu_reset_ch1_env_counter();
+
 // ch2
 void ch2_trigger();
-void apu_set_period();
-void apu_set_cur_vol();
-void apu_set_len();
+void ch2_apu_set_period();
+void ch2_apu_set_cur_vol();
+void ch2_apu_set_len();
 void apu_set_ch2_dac_enabled(bool flag);
 void apu_set_ch2_env_enabled(bool flag);
 void apu_reset_ch2_env_counter();
@@ -42,5 +51,6 @@ void generate_source_audio_samples();
 void resample_audio();
 void queue_audio();
 
-int find_trigger_point();
-void shift_waveform(int trigger_index);
+int find_trigger_point(float buffer[]);
+void shift_waveform(int trigger_index, float combined_buffer[], float render_buffer[]);
+void mix_buffers(const float *ch1, const float *ch2, float *result);

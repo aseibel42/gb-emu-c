@@ -125,11 +125,36 @@ void mem_write(u16 addr, u8 value) {
         } else if (addr == 0xFF04) {
             // Writing anything to DIV register resets it to 0
             io.div = 0;
+        } else if (addr == 0xFF11) { // ch1 len
+            // write to ch1 length register
+            io.ch1_len = value;
+            // set current_len to initial value (wave pattern is read in generate audio function)
+            ch1_apu_set_len();
+        } else if (addr == 0xFF12) { // ch1 vol
+            io.ch1_vol.value = value;
+
+            // dac gets disabled if upper 5 bits of NR12 are all 0
+            apu_set_ch1_dac_enabled((value & 0xF8) != 0);
+
+            // enable ch1 vol envelope if pace > 0
+            apu_set_ch1_env_enabled(io.ch1_vol.pace);
+
+            // set ch1 vol envelope counter to 0
+            apu_reset_ch1_env_counter();
+
+            // set ch1_current_volume to this register's init vol
+            ch1_apu_set_cur_vol(); 
+        } else if (addr == 0xFF14) { // ch1 ctrl
+            io.ch1_ctrl.value = value;
+            // if bit 7 of ch1_ctrl reg gets sit, then call trigger()
+            if(io.ch1_ctrl.trigger) {
+                ch1_trigger();
+            }
         } else if (addr == 0xFF16) { // ch2 len
             // write to ch2 length register
             io.ch2_len = value;
             // set current_len to initial value (wave pattern is read in generate audio function)
-            apu_set_len();
+            ch2_apu_set_len();
         } else if (addr == 0xFF17) { // ch2 vol
             io.ch2_vol.value = value;
 
@@ -143,7 +168,7 @@ void mem_write(u16 addr, u8 value) {
             apu_reset_ch2_env_counter();
 
             // set ch2_current_volume to this register's init vol
-            apu_set_cur_vol(); 
+            ch2_apu_set_cur_vol(); 
         } else if (addr == 0xFF19) { // ch2 ctrl
             io.ch2_ctrl.value = value;
             // if bit 7 of ch2_ctrl reg gets sit, then call trigger()

@@ -142,9 +142,9 @@ struct io {
     // audio
     u8 ch1_sweep; // 0xFF10
     u8 ch1_len; // 0xFF11
-    u8 ch1_vol; // 0xFF12
+    ch_vol ch1_vol; // 0xFF12
     u8 ch1_freq; // 0xFF13
-    u8 ch1_ctrl; // 0xFF14
+    ch_ctrl ch1_ctrl; // 0xFF14
     u8 ch2_sweep; // 0xFF15 - Not used
     u8 ch2_len; // 0xFF16
     ch_vol ch2_vol; // 0xFF17
