@@ -15,6 +15,12 @@ int cpu_speed = 1;
 static bool cpu_speed_up_flag = false;
 static bool cpu_speed_down_flag = false;
 
+// precision timer variables
+// Uint64 current_time = 0;
+// Uint64 last_time = 0;
+// double frequency = 0;
+// double delta_time = 0;
+
 // Global thread synchronization
 pthread_mutex_t cpu_lock, ui_lock;
 pthread_cond_t cpu_cond, ui_cond;
@@ -54,6 +60,12 @@ void* cpu_process(void* ptr) {
 
 void emu_run(char* filename) {
     cart_load(filename);
+
+    // initialize timers
+    // current_time = SDL_GetPerformanceCounter();
+    // last_time = current_time;
+    // frequency = (double)SDL_GetPerformanceFrequency();
+    // delta_time = 0;
 
     cpu_init();
     io_init();
@@ -100,9 +112,17 @@ void emu_run(char* filename) {
         ui_request_frame();
         frames_queued = 0;
 
+        // Calculate time between frames
+        // current_time = SDL_GetPerformanceCounter();
+        // delta_time = (double)(current_time - last_time) * 1000 / frequency;
+        // printf("delta: %f\n",delta_time);
+        // last_time = current_time;
+
         // Resample and queue audio buffer
-        resample_audio();
-        queue_audio();
+        if (cpu_speed) {
+            resample_audio();
+            queue_audio();
+        }
 
         // Update CPU speed
         if (cpu_speed_down_flag) {

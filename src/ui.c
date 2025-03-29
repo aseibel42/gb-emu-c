@@ -8,7 +8,7 @@
 #include "ui.h"
 #include "apu.h"
 
-#define AUDIO_WINDOW_WIDTH 800
+#define AUDIO_WINDOW_WIDTH 600
 #define AUDIO_WINDOW_HEIGHT 400
 
 static SDL_Window *sdlWindow;
@@ -33,8 +33,8 @@ static SDL_Surface *sdlTilemapSurface2;
 
 SDL_Window* audioWindow = NULL;
 SDL_Renderer* audioRenderer = NULL;
-extern float* ch1_render_buffer;
-extern float* ch2_render_buffer;
+extern SquareChannel ch1;
+extern SquareChannel ch2;
 
 static u32 elapsed = 0;
 static const float min_frame_duration_ms = 1000.0f / MAX_FPS;
@@ -394,21 +394,23 @@ void ui_update_audio_window() {
     SDL_RenderDrawLine(audioRenderer, 0, AUDIO_WINDOW_HEIGHT / 2, AUDIO_WINDOW_WIDTH, AUDIO_WINDOW_HEIGHT / 2);
     SDL_RenderDrawLine(audioRenderer, AUDIO_WINDOW_WIDTH / 2, 0, AUDIO_WINDOW_WIDTH / 2, AUDIO_WINDOW_HEIGHT);
 
-    SDL_SetRenderDrawColor(audioRenderer, 0, 255, 0, 255); // Green for left channel
+    // Draw ch1 (left-only)
+    SDL_SetRenderDrawColor(audioRenderer, 0, 255, 0, 255); // Green
     for (int i = 1; i < TARGET_FRAMES; i++) {
         int x1 = (i - 1) * AUDIO_WINDOW_WIDTH / (TARGET_FRAMES);
-        int y1 = AUDIO_WINDOW_HEIGHT / 4 - ch1_render_buffer[(i - 1) * 2] * (AUDIO_WINDOW_HEIGHT / 4);
+        int y1 = AUDIO_WINDOW_HEIGHT / 4 - ch1.render_buffer[(i - 1) * 2] * (AUDIO_WINDOW_HEIGHT / 4);
         int x2 = i * AUDIO_WINDOW_WIDTH / (TARGET_FRAMES);
-        int y2 = AUDIO_WINDOW_HEIGHT / 4 - ch1_render_buffer[i * 2] * (AUDIO_WINDOW_HEIGHT / 4);
+        int y2 = AUDIO_WINDOW_HEIGHT / 4 - ch1.render_buffer[i * 2] * (AUDIO_WINDOW_HEIGHT / 4);
         SDL_RenderDrawLine(audioRenderer, x1, y1, x2, y2);
     }
 
-    SDL_SetRenderDrawColor(audioRenderer, 0, 255, 255, 255); // Blue for right channel
+    // Draw ch2 (left-only)
+    SDL_SetRenderDrawColor(audioRenderer, 0, 255, 255, 255); // Cyan
     for (int i = 1; i < TARGET_FRAMES; i++) {
         int x1 = (i - 1) * AUDIO_WINDOW_WIDTH / TARGET_FRAMES;
-        int y1 = AUDIO_WINDOW_HEIGHT * 3 / 4 - ch2_render_buffer[(i - 1) * 2] * (AUDIO_WINDOW_HEIGHT / 4);
+        int y1 = AUDIO_WINDOW_HEIGHT * 3 / 4 - ch2.render_buffer[(i - 1) * 2] * (AUDIO_WINDOW_HEIGHT / 4);
         int x2 = i * AUDIO_WINDOW_WIDTH / TARGET_FRAMES;
-        int y2 = AUDIO_WINDOW_HEIGHT * 3 / 4 - ch2_render_buffer[i * 2] * (AUDIO_WINDOW_HEIGHT / 4);
+        int y2 = AUDIO_WINDOW_HEIGHT * 3 / 4 - ch2.render_buffer[i * 2] * (AUDIO_WINDOW_HEIGHT / 4);
         SDL_RenderDrawLine(audioRenderer, x1, y1, x2, y2);
     }
 
