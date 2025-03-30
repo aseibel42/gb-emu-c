@@ -15,7 +15,7 @@ u8 apu_speed_counter = 0;
 SquareChannel ch1 = {0};
 SquareChannel ch2 = {0};
 
-// Audio buffers
+// Audio buffer
 u16 source_buffer_count = 0;
 float* combined_target_buffer = NULL;
 
@@ -63,6 +63,60 @@ void apu_init() {
     SDL_PauseAudioDevice(dev, 0);
 }
 
+// Function to initialize a SquareChannel struct
+SquareChannel init_square_channel(u8 ch_num) {
+    SquareChannel ch = {0}; // Zero-initialize the struct
+    
+    // Set default values
+    ch.period_counter = 0;
+    ch.length_counter = 0;
+    ch.vol_env_counter = 0;
+    ch.wave_duty_bit_counter = 0;
+
+    ch.current_vol = 0;
+    ch.dac_enable = true;
+    ch.vol_env_enable = false;
+
+    ch.trigger_index = TARGET_FRAMES + (TARGET_FRAMES / 2);
+
+    // Allocate buffers on the heap
+    ch.source_sample_buffer = malloc(SOURCE_BUFFER_SIZE * 2 * sizeof(float));
+    ch.target_sample_buffer = malloc(sizeof(AudioBuffer));
+
+    // Check for allocation failure
+    if (!ch.source_sample_buffer || !ch.target_sample_buffer) {
+        printf("Error: Failed to allocate memory for buffers\n");
+    }
+
+    // Initialize target buffer
+    memset(ch.target_sample_buffer, -1, sizeof(AudioBuffer));
+
+    // Channel-specific references
+    switch (ch_num) {
+        case 1:
+            ch.master_ctrl_bit = 0;
+            ch.master_vol_left_bit = 4;
+            ch.master_vol_right_bit = 0; 
+            ch.ch_length = &io.ch1_len;
+            ch.ch_vol = &io.ch1_vol;
+            ch.ch_freq = &io.ch1_freq;
+            ch.ch_ctrl = &io.ch1_ctrl;
+            break;
+        case 2:
+            ch.master_ctrl_bit = 1;
+            ch.master_vol_left_bit = 5;
+            ch.master_vol_right_bit = 1;
+            ch.ch_length = &io.ch2_len;                 
+            ch.ch_vol = &io.ch2_vol;
+            ch.ch_freq = &io.ch2_freq;
+            ch.ch_ctrl = &io.ch2_ctrl;
+            break;
+        default:
+    }
+    
+    return ch;  // Return the initialized struct
+}
+
 // APU ticks once every M-cycle
 void apu_tick() { 
     // Increment period counter
@@ -75,7 +129,11 @@ void apu_tick() {
     // Get a new sample every 4 M-ticks - 17556 M-ticks per frame at 60 FPS -> (17,556 / 32) * 8 => 4389 audio samples / frame for 256kHz sample rate
     sample_tick_counter++;
     if(sample_tick_counter == (4 * cpu_speed)) {
-        generate_source_audio_samples();
+        if (source_buffer_count < SOURCE_BUFFER_SIZE) {
+            generate_source_audio_samples(&ch1);
+            generate_source_audio_samples(&ch2);
+            source_buffer_count++;
+        }
         sample_tick_counter = 0; // reset counter
     }
 }
@@ -167,121 +225,61 @@ void sweep_tick() {
 
 }
 
-void ch1_trigger() {
-    // enable ch2 on FF26 register
-    io.master_ctrl.ch1_enable = true;
+void square_trigger(SquareChannel *ch) {
+    // enable ch on master_ctrl register
+    io.master_ctrl.value |= (1 << ch->master_ctrl_bit);
 
-    // if expired, reset length timer
-    if (ch1.length_counter >= 64) {
-        ch1_apu_set_len();
+    // if length timer is expired, reset it to initial value stored in NRX1
+    if (ch->length_counter >= 64) {
+        ch->length_counter = *(ch->ch_length) & 0b111111;
     }
 
-    // reset period (set initial value to NR13/14)
-    ch1_apu_set_period();
+    // reset period counter (set to initial value in NRX3/X4)
+    u16 period = ((u16)ch->ch_ctrl->period << 8) | *(ch->ch_freq);
+    ch->period_counter = period;
 
-    // reset env timer
-    ch1.vol_env_counter = 0;
+    // reset volume envelope timer
+    ch->vol_env_counter = 0;
 
-    // reset volume
-    ch1.current_vol = io.ch1_vol.init_vol;
+    // reset current volume to initial volume in NRX2
+    ch->current_vol = ch->ch_vol->init_vol;
+    
 }
 
-void ch2_trigger() {
-    // enable ch2 on FF26 register
-    io.master_ctrl.ch2_enable = true;
+void square_handle_volume_write(SquareChannel *ch) {
+    // dac gets disabled if upper 5 bits of NRX2 are all 0
+    ch->dac_enable = ((ch->ch_vol->value & 0xF8) != 0);
 
-    // if expired, reset length timer
-    if (ch2.length_counter >= 64) {
-        ch2_apu_set_len();
-    }
+    // enable ch vol envelope if pace > 0
+    ch->vol_env_enable = ch->ch_vol->pace;
 
-    // reset period (set initial value to NR23/24)
-    ch2_apu_set_period();
+    // set ch vol envelope counter to 0
+    ch->vol_env_counter = 0;
 
-    // reset env timer
-    ch2.vol_env_counter = 0;
-
-    // reset volume
-    ch2.current_vol = io.ch2_vol.init_vol;
+    // set ch current_volume to this vol register's init vol
+    ch->current_vol = ch->ch_vol->init_vol;
 }
 
-void ch1_apu_set_period() {
-    u16 period = ((u16)io.ch1_ctrl.period << 8) | io.ch1_freq;
-    ch1.period_counter = period;
-}
-
-void ch2_apu_set_period() {
-    u16 period = ((u16)io.ch2_ctrl.period << 8) | io.ch2_freq;
-    ch2.period_counter = period;
-}
-
-u8 apu_get_wave_bit(u8 wave_pattern, u8 wave_bit) {
-    return (wave_duty_table[wave_pattern] >> (7 - wave_bit)) & 1;
-}
-
-void ch1_apu_set_cur_vol() {
-    ch1.current_vol = io.ch1_vol.init_vol;
-}
-
-void ch1_apu_set_len() {
-    ch1.length_counter = (io.ch1_len & 0b111111);
-}
-
-void apu_set_ch1_dac_enabled(bool flag) {
-    ch1.dac_enable = flag;
-}
-
-void apu_set_ch1_env_enabled(bool flag) {
-    ch1.vol_env_enable = flag;
-}
-
-void apu_reset_ch1_env_counter() {
-    ch1.vol_env_counter = 0;
-}
-
-void ch2_apu_set_cur_vol() {
-    ch2.current_vol = io.ch2_vol.init_vol;
-}
-
-void ch2_apu_set_len() {
-    ch2.length_counter = (io.ch2_len & 0b111111);
-}
-
-void apu_set_ch2_dac_enabled(bool flag) {
-    ch2.dac_enable = flag;
-}
-
-void apu_set_ch2_env_enabled(bool flag) {
-    ch2.vol_env_enable = flag;
-}
-
-void apu_reset_ch2_env_counter() {
-    ch2.vol_env_counter = 0;
-}
-
-void generate_source_audio_samples() {
-    // Retrieve wave pattern from highest 2 bits of NR21
-    u8 ch1_wave_pattern = (io.ch1_len >> 6) & 0b11;
-    u8 ch2_wave_pattern = (io.ch2_len >> 6) & 0b11;
-
+void generate_source_audio_samples(SquareChannel *ch) {
+    // Retrieve wave pattern from highest 2 bits of NRX1
+    // look up wave bit (0 or 1) knowing wave pattern and wave duty bit counter
+    u8 ch_wave_pattern = (*(ch->ch_length) >> 6) & 0b11;   
+    u8 wave_bit = (wave_duty_table[ch_wave_pattern] >> (7 - ch->wave_duty_bit_counter)) & 1;
+    
     // Rescale output volume (0 -> -1, 15 -> 1)
-    float ch1_output_volume = ((float)ch1.current_vol / 7.5f) - 1.0f;
-    float ch2_output_volume = ((float)ch2.current_vol / 7.5f) - 1.0f;
+    float ch_output_volume = ((float)(ch->current_vol) / 7.5f) - 1.0f;
 
     // scale volume based on master left and right volume (value of 0-7 refers to vol level of 1-8, divide by 8 to rescale between -1 and 1)
-    float ch1_left_output_volume = ch1_output_volume * (io.master_vol.vol_left + 1)/8;
-    float ch1_right_output_volume = ch1_output_volume * (io.master_vol.vol_right + 1)/8;
-    float ch2_left_output_volume = ch2_output_volume * (io.master_vol.vol_left + 1)/8;
-    float ch2_right_output_volume = ch2_output_volume * (io.master_vol.vol_right + 1)/8;
+    float ch_left_output_volume = ch_output_volume * (io.master_vol.vol_left + 1)/8;
+    float ch_right_output_volume = ch_output_volume * (io.master_vol.vol_right + 1)/8;
 
-    // if channel enabled, dac enabled, and waveduty bit is 1, set output volume to calc. value, otherwise set to -1 (first L, then R)
-    if (source_buffer_count < SOURCE_BUFFER_SIZE) {
-        ch1.source_sample_buffer[2*source_buffer_count] = (io.master_pan.ch1_left && ch1.dac_enable && apu_get_wave_bit(ch1_wave_pattern, ch1.wave_duty_bit_counter)) ? ch1_left_output_volume : -1; 
-        ch1.source_sample_buffer[2*source_buffer_count+1] = (io.master_pan.ch1_right && ch1.dac_enable && apu_get_wave_bit(ch1_wave_pattern, ch1.wave_duty_bit_counter)) ? ch1_right_output_volume : -1; 
-        ch2.source_sample_buffer[2*source_buffer_count] = (io.master_pan.ch2_left && ch2.dac_enable && apu_get_wave_bit(ch2_wave_pattern, ch2.wave_duty_bit_counter)) ? ch2_left_output_volume : -1; 
-        ch2.source_sample_buffer[2*source_buffer_count+1] = (io.master_pan.ch2_right && ch2.dac_enable && apu_get_wave_bit(ch2_wave_pattern, ch2.wave_duty_bit_counter)) ? ch2_right_output_volume : -1; 
-        source_buffer_count++;
-    }
+    // left and right vol pan (true or false)
+    bool left_pan = (io.master_pan.value >> ch->master_vol_left_bit) & 1;
+    bool right_pan = (io.master_pan.value >> ch->master_vol_right_bit) & 1;
+
+    // if channel enabled, dac enabled, and waveduty bit is 1, set sample value to calc. output vol, otherwise set to -1 (first L, then R)
+    ch->source_sample_buffer[2*source_buffer_count] = (left_pan && ch->dac_enable && wave_bit) ? ch_left_output_volume : -1; 
+    ch->source_sample_buffer[2*source_buffer_count+1] = (right_pan && ch->dac_enable && wave_bit) ? ch_right_output_volume : -1; 
 }
 
 // resample audio from source sample rate (262144 Hz) to sample rate of audio device (48000 Hz)
@@ -318,15 +316,9 @@ void resample_audio() {
     }
 
     // Find trigger in middle half of combined buffer
-    int ch1_trigger_index = find_trigger_point(ch1.target_sample_buffer->combined);
-    int ch2_trigger_index = find_trigger_point(ch2.target_sample_buffer->combined);
-
-    // Shift waveform to keep trigger centered
-    // This will update the audio render_buffers
-    shift_waveform(ch1_trigger_index, ch1.target_sample_buffer->combined, ch1.render_buffer);
-    shift_waveform(ch2_trigger_index, ch2.target_sample_buffer->combined, ch2.render_buffer);
-
-
+    ch1.trigger_index = find_trigger_point(ch1.target_sample_buffer->combined);
+    ch2.trigger_index = find_trigger_point(ch2.target_sample_buffer->combined);
+    
     // Reset source sample buffer
     source_buffer_count = 0;
 }
@@ -345,7 +337,7 @@ void queue_audio() {
 }
 
 // Function to find trigger in middle half of combined buffer
-int find_trigger_point(float buffer[]) {
+u16 find_trigger_point(float buffer[]) {
     float trigger_threshold = -1.0f;
     int start = TARGET_FRAMES / 2;  // Middle of prev buffer
     int end = TARGET_FRAMES + (TARGET_FRAMES / 2);  // Middle of new buffer
@@ -357,65 +349,9 @@ int find_trigger_point(float buffer[]) {
     return end; // Default: no trigger found, use end of middle section
 }
 
-// Function to shift buffer so trigger is centered
-void shift_waveform(int trigger_index, float combined_buffer[], float render_buffer[]) {   
-    int shift_amount = trigger_index - (TARGET_FRAMES / 2);
-    for (int i = 0; i < TARGET_FRAMES; i++) {
-        render_buffer[i * 2] = combined_buffer[(i + shift_amount) * 2];     // Left channel
-        render_buffer[i * 2 + 1] = combined_buffer[(i + shift_amount) * 2 + 1]; // Right channel
-    }
-}
-
 // Function to mix audio buffers (average them)
 void mix_buffers(const float *ch1, const float *ch2, float *result) {
     for (int i = 0; i < TARGET_FRAMES * 2; i++) {
         result[i] = (ch1[i] + ch2[i]) / 2.0f;
     }
-}
-
-// Function to initialize a SquareChannel struct
-SquareChannel init_square_channel(u8 ch_num) {
-    SquareChannel ch = {0}; // Zero-initialize the struct
-    
-    // Set default values
-    ch.period_counter = 0;
-    ch.length_counter = 0;
-    ch.vol_env_counter = 0;
-    ch.wave_duty_bit_counter = 0;
-
-    ch.current_vol = 0;
-    ch.dac_enable = true;
-    ch.vol_env_enable = false;
-
-    // Allocate buffers on the heap
-    ch.source_sample_buffer = malloc(SOURCE_BUFFER_SIZE * 2 * sizeof(float));
-    ch.target_sample_buffer = malloc(sizeof(AudioBuffer));
-    ch.render_buffer = malloc(TARGET_FRAMES * 2 * sizeof(float));
-
-    // Check for allocation failure
-    if (!ch.source_sample_buffer || !ch.target_sample_buffer || !ch.render_buffer) {
-        printf("Error: Failed to allocate memory for buffers\n");
-    }
-
-    // Zero out the target buffer
-    memset(ch.target_sample_buffer, 0, sizeof(AudioBuffer));
-
-    // Channel-specific references
-    switch (ch_num) {
-        case 1:
-            ch.master_ctrl_bit = 0;
-            ch.ch_vol = &io.ch1_vol;
-            ch.ch_freq = &io.ch1_freq;
-            ch.ch_ctrl = &io.ch1_ctrl;
-            break;
-        case 2:
-            ch.master_ctrl_bit = 1;            
-            ch.ch_vol = &io.ch2_vol;
-            ch.ch_freq = &io.ch2_freq;
-            ch.ch_ctrl = &io.ch2_ctrl;
-            break;
-        default:
-    }
-    
-    return ch;  // Return the initialized struct
 }

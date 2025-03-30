@@ -6,7 +6,7 @@
 #include "apu.h"
 #include "mem.h"
 
-Bus bus = {};
+Bus bus = {0};
 
 bool dma_active = false;
 
@@ -14,7 +14,10 @@ static u8 dma_delay = 0;
 static u8 dma_offset = 0;
 static u16 dma_source_addr = 0;
 
-static u8 oam[0xA0] = {};
+static u8 oam[0xA0] = {0};
+
+extern SquareChannel ch1;
+extern SquareChannel ch2;
 
 void mem_init() {
     // Video RAM
@@ -128,52 +131,31 @@ void mem_write(u16 addr, u8 value) {
         } else if (addr == 0xFF11) { // ch1 len
             // write to ch1 length register
             io.ch1_len = value;
+
             // set current_len to initial value (wave pattern is read in generate audio function)
-            ch1_apu_set_len();
+            ch1.length_counter = (io.ch1_len & 0b111111);
         } else if (addr == 0xFF12) { // ch1 vol
             io.ch1_vol.value = value;
-
-            // dac gets disabled if upper 5 bits of NR12 are all 0
-            apu_set_ch1_dac_enabled((value & 0xF8) != 0);
-
-            // enable ch1 vol envelope if pace > 0
-            apu_set_ch1_env_enabled(io.ch1_vol.pace);
-
-            // set ch1 vol envelope counter to 0
-            apu_reset_ch1_env_counter();
-
-            // set ch1_current_volume to this register's init vol
-            ch1_apu_set_cur_vol(); 
+            square_handle_volume_write(&ch1);  
         } else if (addr == 0xFF14) { // ch1 ctrl
             io.ch1_ctrl.value = value;
             // if bit 7 of ch1_ctrl reg gets sit, then call trigger()
             if(io.ch1_ctrl.trigger) {
-                ch1_trigger();
+                square_trigger(&ch1);
             }
         } else if (addr == 0xFF16) { // ch2 len
             // write to ch2 length register
             io.ch2_len = value;
             // set current_len to initial value (wave pattern is read in generate audio function)
-            ch2_apu_set_len();
+            ch2.length_counter = (io.ch2_len & 0b111111);
         } else if (addr == 0xFF17) { // ch2 vol
             io.ch2_vol.value = value;
-
-            // dac gets disabled if upper 5 bits of NR22 are all 0
-            apu_set_ch2_dac_enabled((value & 0xF8) != 0);
-
-            // enable ch2 vol envelope if pace > 0
-            apu_set_ch2_env_enabled(io.ch2_vol.pace);
-
-            // set ch2 vol envelope counter to 0
-            apu_reset_ch2_env_counter();
-
-            // set ch2_current_volume to this register's init vol
-            ch2_apu_set_cur_vol(); 
+            square_handle_volume_write(&ch2); 
         } else if (addr == 0xFF19) { // ch2 ctrl
             io.ch2_ctrl.value = value;
             // if bit 7 of ch2_ctrl reg gets sit, then call trigger()
             if(io.ch2_ctrl.trigger) {
-                ch2_trigger();
+                square_trigger(&ch2);
             }
         } else if (addr == 0xFF46) {
             // Writing anything to DMA register starts a DMA transfer to OAM

@@ -30,11 +30,14 @@ typedef struct {
     bool vol_env_enable;
 
     float *source_sample_buffer;
-    AudioBuffer *target_sample_buffer;
-    float *render_buffer;
+    AudioBuffer *target_sample_buffer; 
+    u16 trigger_index;
 
     // channel-specific values and pointers (referencing channel 1 or 2 registers)
-    u8 master_ctrl_bit;    
+    u8 master_ctrl_bit;
+    u8 master_vol_left_bit;
+    u8 master_vol_right_bit;    
+    u8 *ch_length;
     ch_vol *ch_vol;
     u8 *ch_freq;
     ch_ctrl *ch_ctrl;
@@ -42,44 +45,26 @@ typedef struct {
 
 // general
 void apu_init();
+SquareChannel init_square_channel(u8 ch_num);
 void apu_tick();
 
-void frame_sequence_tick();
 void period_counter_tick();
 void square_period_counter_tick(SquareChannel *ch);
+
+void frame_sequence_tick();
 void length_counter_tick();
 void square_length_counter_tick(SquareChannel *ch);
 void volume_envelope_tick();
 void square_vol_env_tick(SquareChannel *ch);
 void sweep_tick();
 
-u8 apu_get_wave_bit(u8 wave_pattern, u8 wave_bit);
-
-// ch1
-void ch1_trigger();
-void ch1_apu_set_period();
-void ch1_apu_set_cur_vol();
-void ch1_apu_set_len();
-void apu_set_ch1_dac_enabled(bool flag);
-void apu_set_ch1_env_enabled(bool flag);
-void apu_reset_ch1_env_counter();
-
-// ch2
-void ch2_trigger();
-void ch2_apu_set_period();
-void ch2_apu_set_cur_vol();
-void ch2_apu_set_len();
-void apu_set_ch2_dac_enabled(bool flag);
-void apu_set_ch2_env_enabled(bool flag);
-void apu_reset_ch2_env_counter();
+void square_trigger(SquareChannel *ch);
+void square_handle_volume_write(SquareChannel *ch);
 
 // audio buffer
-void generate_source_audio_samples();
+void generate_source_audio_samples(SquareChannel *ch);
 void resample_audio();
 void queue_audio();
 
-int find_trigger_point(float buffer[]);
-void shift_waveform(int trigger_index, float combined_buffer[], float render_buffer[]);
+u16 find_trigger_point(float buffer[]);
 void mix_buffers(const float *ch1, const float *ch2, float *result);
-
-SquareChannel init_square_channel(u8 ch_num);

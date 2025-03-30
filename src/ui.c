@@ -394,24 +394,31 @@ void ui_update_audio_window() {
     SDL_RenderDrawLine(audioRenderer, 0, AUDIO_WINDOW_HEIGHT / 2, AUDIO_WINDOW_WIDTH, AUDIO_WINDOW_HEIGHT / 2);
     SDL_RenderDrawLine(audioRenderer, AUDIO_WINDOW_WIDTH / 2, 0, AUDIO_WINDOW_WIDTH / 2, AUDIO_WINDOW_HEIGHT);
 
+    u16 ch1_shift = ch1.trigger_index - (TARGET_FRAMES / 2);
+    u16 ch2_shift = ch2.trigger_index - (TARGET_FRAMES / 2);
+
     // Draw ch1 (left-only)
     SDL_SetRenderDrawColor(audioRenderer, 0, 255, 0, 255); // Green
+    int x1 = 0;
+    int y1 = AUDIO_WINDOW_HEIGHT / 4 - ch1.target_sample_buffer->combined[(ch1_shift) * 2] * (AUDIO_WINDOW_HEIGHT / 4);
     for (int i = 1; i < TARGET_FRAMES; i++) {
-        int x1 = (i - 1) * AUDIO_WINDOW_WIDTH / (TARGET_FRAMES);
-        int y1 = AUDIO_WINDOW_HEIGHT / 4 - ch1.render_buffer[(i - 1) * 2] * (AUDIO_WINDOW_HEIGHT / 4);
         int x2 = i * AUDIO_WINDOW_WIDTH / (TARGET_FRAMES);
-        int y2 = AUDIO_WINDOW_HEIGHT / 4 - ch1.render_buffer[i * 2] * (AUDIO_WINDOW_HEIGHT / 4);
+        int y2 = AUDIO_WINDOW_HEIGHT / 4 - ch1.target_sample_buffer->combined[(i + ch1_shift) * 2] * (AUDIO_WINDOW_HEIGHT / 4);
         SDL_RenderDrawLine(audioRenderer, x1, y1, x2, y2);
+        x1 = x2;
+        y1 = y2;
     }
 
     // Draw ch2 (left-only)
     SDL_SetRenderDrawColor(audioRenderer, 0, 255, 255, 255); // Cyan
+    x1 = 0;
+    y1 = AUDIO_WINDOW_HEIGHT * 3 / 4 - ch2.target_sample_buffer->combined[(ch2_shift) * 2] * (AUDIO_WINDOW_HEIGHT / 4);
     for (int i = 1; i < TARGET_FRAMES; i++) {
-        int x1 = (i - 1) * AUDIO_WINDOW_WIDTH / TARGET_FRAMES;
-        int y1 = AUDIO_WINDOW_HEIGHT * 3 / 4 - ch2.render_buffer[(i - 1) * 2] * (AUDIO_WINDOW_HEIGHT / 4);
         int x2 = i * AUDIO_WINDOW_WIDTH / TARGET_FRAMES;
-        int y2 = AUDIO_WINDOW_HEIGHT * 3 / 4 - ch2.render_buffer[i * 2] * (AUDIO_WINDOW_HEIGHT / 4);
+        int y2 = AUDIO_WINDOW_HEIGHT * 3 / 4 - ch2.target_sample_buffer->combined[(i + ch2_shift) * 2] * (AUDIO_WINDOW_HEIGHT / 4);
         SDL_RenderDrawLine(audioRenderer, x1, y1, x2, y2);
+        x1 = x2;
+        y1 = y2;
     }
 
     SDL_RenderPresent(audioRenderer);
