@@ -8,12 +8,12 @@
 #define SOURCE_SAMPLE_RATE (M_CYCLES_PER_FRAME / 4 * (int)MAX_FPS) //263340
 #define TARGET_SAMPLE_RATE 48000   // Playback sample rate (Hz)
 #define SOURCE_BUFFER_SIZE 4389          // Number of source audio samples per frames
-#define TARGET_FRAMES (((int)SOURCE_BUFFER_SIZE * TARGET_SAMPLE_RATE) / SOURCE_SAMPLE_RATE) 
+#define TARGET_FRAMES (((int)SOURCE_BUFFER_SIZE * TARGET_SAMPLE_RATE) / SOURCE_SAMPLE_RATE)
 
 typedef union {
     struct {
         float prev[TARGET_FRAMES * 2];
-        float new[TARGET_FRAMES * 2];
+        float curr[TARGET_FRAMES * 2];
     };
     float combined[TARGET_FRAMES * 4];
 } AudioBuffer;

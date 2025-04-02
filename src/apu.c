@@ -75,7 +75,7 @@ void apu_init() {
 // Function to initialize a SquareChannel struct
 SquareChannel init_square_channel(u8 ch_num) {
     SquareChannel ch = {0}; // Zero-initialize the struct
-    
+
     // Set default values
     ch.period_counter = 0;
     ch.length_counter = 0;
@@ -105,7 +105,7 @@ SquareChannel init_square_channel(u8 ch_num) {
         case 1:
             ch.master_ctrl_bit = 0;
             ch.master_vol_left_bit = 4;
-            ch.master_vol_right_bit = 0; 
+            ch.master_vol_right_bit = 0;
             ch.ch_length = &io.ch1_len;
             ch.ch_vol = &io.ch1_vol;
             ch.ch_freq = &io.ch1_freq;
@@ -115,21 +115,20 @@ SquareChannel init_square_channel(u8 ch_num) {
             ch.master_ctrl_bit = 1;
             ch.master_vol_left_bit = 5;
             ch.master_vol_right_bit = 1;
-            ch.ch_length = &io.ch2_len;                 
+            ch.ch_length = &io.ch2_len;
             ch.ch_vol = &io.ch2_vol;
             ch.ch_freq = &io.ch2_freq;
             ch.ch_ctrl = &io.ch2_ctrl;
             break;
-        default:
     }
-    
+
     return ch;  // Return the initialized struct
 }
 
 // Function to initialize a WaveChannel struct
 WaveChannel init_wave_channel() {
     WaveChannel ch = {0}; // Zero-initialize the struct
-    
+
     // Set default values
     ch.period_counter = 0;
     ch.length_counter = 0;
@@ -155,7 +154,7 @@ WaveChannel init_wave_channel() {
 }
 
 // APU ticks once every M-cycle
-void apu_tick() { 
+void apu_tick() {
     // Increment period counter
     apu_speed_counter++; // apu_speed_counter rescales audio freq at higher cpu_speed back to normal
     if (apu_speed_counter == cpu_speed) {
@@ -181,7 +180,7 @@ void period_counter_tick() {
     square_period_counter_tick(&ch1);
     square_period_counter_tick(&ch2);
     wave_period_counter_tick();
-    wave_period_counter_tick(); // wave period counter happens 2x the freq of other period counters 
+    wave_period_counter_tick(); // wave period counter happens 2x the freq of other period counters
 }
 
 void square_period_counter_tick(SquareChannel *ch) {
@@ -261,7 +260,7 @@ void square_vol_env_tick(SquareChannel *ch) {
         if(ch->vol_env_counter == ch->ch_vol->pace) {
             // Reset envelope counter once pace is reached
             ch->vol_env_counter = 0;
-            
+
             // If direction bit is set then crescendo, otherwise decrescendo.  Lock vol between 0 and 15
             if (ch->ch_vol->dir) {
                 if (ch->current_vol < 15) {
@@ -276,7 +275,7 @@ void square_vol_env_tick(SquareChannel *ch) {
             // Disable vol_env if volume reaches 0 or 15
             if (ch->current_vol == 0 || ch->current_vol == 15) {
                 ch->vol_env_enable = false;
-            }          
+            }
         }
     }
 }
@@ -303,7 +302,7 @@ void square_trigger(SquareChannel *ch) {
 
     // reset current volume to initial volume in NRX2
     ch->current_vol = ch->ch_vol->init_vol;
-    
+
 }
 
 void ch3_trigger() {
@@ -320,7 +319,7 @@ void ch3_trigger() {
     ch3.period_counter = period;
 
     // Reset wave position
-    ch3.wave_duty_bit_counter = 0;    
+    ch3.wave_duty_bit_counter = 0;
 }
 
 void square_handle_volume_write(SquareChannel *ch) {
@@ -340,9 +339,9 @@ void square_handle_volume_write(SquareChannel *ch) {
 void generate_source_audio_samples(SquareChannel *ch) {
     // Retrieve wave pattern from highest 2 bits of NRX1
     // look up wave bit (0 or 1) knowing wave pattern and wave duty bit counter
-    u8 ch_wave_pattern = (*(ch->ch_length) >> 6) & 0b11;   
+    u8 ch_wave_pattern = (*(ch->ch_length) >> 6) & 0b11;
     u8 wave_bit = (wave_duty_table[ch_wave_pattern] >> (7 - ch->wave_duty_bit_counter)) & 1;
-    
+
     // Rescale output volume (0 -> -1, 15 -> 1)
     float ch_output_volume = ((float)(ch->current_vol) / 7.5f) - 1.0f;
 
@@ -355,17 +354,17 @@ void generate_source_audio_samples(SquareChannel *ch) {
     bool right_pan = (io.master_pan.value >> ch->master_vol_right_bit) & 1;
 
     // if channel enabled, dac enabled, and waveduty bit is 1, set sample value to calc. output vol, otherwise set to -1 (first L, then R)
-    ch->source_sample_buffer[2*source_buffer_count] = (left_pan && ch->dac_enable && wave_bit) ? ch_left_output_volume : -1; 
-    ch->source_sample_buffer[2*source_buffer_count+1] = (right_pan && ch->dac_enable && wave_bit) ? ch_right_output_volume : -1; 
+    ch->source_sample_buffer[2*source_buffer_count] = (left_pan && ch->dac_enable && wave_bit) ? ch_left_output_volume : -1;
+    ch->source_sample_buffer[2*source_buffer_count+1] = (right_pan && ch->dac_enable && wave_bit) ? ch_right_output_volume : -1;
 }
 
 void ch3_generate_source_audio_samples() {
     // Retrieve wave pattern from highest 2 bits of NRX1
     // look up wave bit (0 or 1) knowing wave pattern and wave duty bit counter
-    u8 output_level = (io.ch3_vol >> 5) & 0b11;  // 0b00, 0b01, 0b10, or 0b11 
+    u8 output_level = (io.ch3_vol >> 5) & 0b11;  // 0b00, 0b01, 0b10, or 0b11
     u8 shift_amount = ch3_vol_shift_map[output_level]; // 0, 100, 50, or 25% vol
     u8 current_vol = (ch3_get_wave_nibble(ch3.wave_duty_bit_counter)) >> shift_amount; // 1 or 0
-    
+
     // Rescale output volume (0 -> -1, 15 -> 1)
     float ch_output_volume = ((float)current_vol / 7.5f) - 1.0f;
 
@@ -378,15 +377,15 @@ void ch3_generate_source_audio_samples() {
     bool right_pan = (io.master_pan.value >> io.master_vol.vol_right) & 1;
 
     // if channel enabled, dac enabled, and waveduty bit is 1, set sample value to calc. output vol, otherwise set to -1 (first L, then R)
-    ch3.source_sample_buffer[2*source_buffer_count] = (left_pan && ch3.dac_enable) ? ch_left_output_volume : -1; 
-    ch3.source_sample_buffer[2*source_buffer_count+1] = (right_pan && ch3.dac_enable) ? ch_right_output_volume : -1; 
+    ch3.source_sample_buffer[2*source_buffer_count] = (left_pan && ch3.dac_enable) ? ch_left_output_volume : -1;
+    ch3.source_sample_buffer[2*source_buffer_count+1] = (right_pan && ch3.dac_enable) ? ch_right_output_volume : -1;
 }
 
 u8 ch3_get_wave_nibble(u8 index) {
     // Ensure the index is within the valid range of 0 to 31
     if (index > 31) {
         printf("Error: invalid wave index");
-        return 0; 
+        return 0;
     }
 
     // Find which byte and nibble within that byte to extract
@@ -407,16 +406,16 @@ u8 ch3_get_wave_nibble(u8 index) {
 // resample audio from source sample rate (262144 Hz) to sample rate of audio device (48000 Hz)
 void resample_audio() {
     // Save new buffer as previous buffer for next iteration
-    memcpy(ch1.target_sample_buffer->prev, ch1.target_sample_buffer->new, sizeof(float) * TARGET_FRAMES * 2);
-    memcpy(ch2.target_sample_buffer->prev, ch2.target_sample_buffer->new, sizeof(float) * TARGET_FRAMES * 2);
-    memcpy(ch3.target_sample_buffer->prev, ch3.target_sample_buffer->new, sizeof(float) * TARGET_FRAMES * 2);
+    memcpy(ch1.target_sample_buffer->prev, ch1.target_sample_buffer->curr, sizeof(float) * TARGET_FRAMES * 2);
+    memcpy(ch2.target_sample_buffer->prev, ch2.target_sample_buffer->curr, sizeof(float) * TARGET_FRAMES * 2);
+    memcpy(ch3.target_sample_buffer->prev, ch3.target_sample_buffer->curr, sizeof(float) * TARGET_FRAMES * 2);
     // printf("source_buffer_count: %d\n",source_buffer_count);
 
     // find number of source frames per target frame - (262144/48000 ~ 5.46)
     float step = (float)SOURCE_SAMPLE_RATE / TARGET_SAMPLE_RATE;
- 
+
     // calculate target audio samples by linearly interpolating between source audio samples
-    float index = 0.0f; 
+    float index = 0.0f;
     for (u32 i = 0; i < TARGET_FRAMES; i++) {
         // find relative distance of target sample from first source sample
         int int_index = (int)index;
@@ -428,15 +427,15 @@ void resample_audio() {
         if (next_src_pos >= SOURCE_BUFFER_SIZE * 2) next_src_pos = src_pos;
 
         // calculate target samples
-        ch1.target_sample_buffer->new[2 * i] = ch1.source_sample_buffer[src_pos] * (1.0f - frac) + ch1.source_sample_buffer[next_src_pos] * frac;
-        ch1.target_sample_buffer->new[2 * i + 1] = ch1.source_sample_buffer[src_pos + 1] * (1.0f - frac) + ch1.source_sample_buffer[next_src_pos + 1] * frac;
+        ch1.target_sample_buffer->curr[2 * i] = ch1.source_sample_buffer[src_pos] * (1.0f - frac) + ch1.source_sample_buffer[next_src_pos] * frac;
+        ch1.target_sample_buffer->curr[2 * i + 1] = ch1.source_sample_buffer[src_pos + 1] * (1.0f - frac) + ch1.source_sample_buffer[next_src_pos + 1] * frac;
 
-        ch2.target_sample_buffer->new[2 * i] = ch2.source_sample_buffer[src_pos] * (1.0f - frac) + ch2.source_sample_buffer[next_src_pos] * frac;
-        ch2.target_sample_buffer->new[2 * i + 1] = ch2.source_sample_buffer[src_pos + 1] * (1.0f - frac) + ch2.source_sample_buffer[next_src_pos + 1] * frac;
+        ch2.target_sample_buffer->curr[2 * i] = ch2.source_sample_buffer[src_pos] * (1.0f - frac) + ch2.source_sample_buffer[next_src_pos] * frac;
+        ch2.target_sample_buffer->curr[2 * i + 1] = ch2.source_sample_buffer[src_pos + 1] * (1.0f - frac) + ch2.source_sample_buffer[next_src_pos + 1] * frac;
 
-        ch3.target_sample_buffer->new[2 * i] = ch3.source_sample_buffer[src_pos] * (1.0f - frac) + ch3.source_sample_buffer[next_src_pos] * frac;
-        ch3.target_sample_buffer->new[2 * i + 1] = ch3.source_sample_buffer[src_pos + 1] * (1.0f - frac) + ch3.source_sample_buffer[next_src_pos + 1] * frac;
-        
+        ch3.target_sample_buffer->curr[2 * i] = ch3.source_sample_buffer[src_pos] * (1.0f - frac) + ch3.source_sample_buffer[next_src_pos] * frac;
+        ch3.target_sample_buffer->curr[2 * i + 1] = ch3.source_sample_buffer[src_pos + 1] * (1.0f - frac) + ch3.source_sample_buffer[next_src_pos + 1] * frac;
+
         // increment index (location of target sample relative to source samples)
         index += step;
     }
@@ -445,15 +444,15 @@ void resample_audio() {
     ch1.trigger_index = find_trigger_point(ch1.target_sample_buffer->combined);
     ch2.trigger_index = find_trigger_point(ch2.target_sample_buffer->combined);
     ch3.trigger_index = ch3_find_trigger_point(ch3.target_sample_buffer->combined);
-    
+
     // Reset source sample buffer
     source_buffer_count = 0;
 }
 
-void queue_audio() {    
+void queue_audio() {
     // mix audio
-    mix_buffers(ch1.target_sample_buffer->new, ch2.target_sample_buffer->new, ch3.target_sample_buffer->new, combined_target_buffer);
-    
+    mix_buffers(ch1.target_sample_buffer->curr, ch2.target_sample_buffer->curr, ch3.target_sample_buffer->curr, combined_target_buffer);
+
     // Add samples from buffer to audio queue (but not if queue is too large)
     while (SDL_GetQueuedAudioSize(dev) > 4 * TARGET_FRAMES * 2 * sizeof(float)) {
         SDL_Delay(1);
@@ -478,12 +477,12 @@ u16 find_trigger_point(float buffer[]) {
 
 // Function to find trigger in ch3 (find beginning of wave pattern)
 u16 ch3_find_trigger_point(float buffer[]) {
-    u8 output_level = (io.ch3_vol >> 5) & 0b11;  // 0b00, 0b01, 0b10, or 0b11 
+    u8 output_level = (io.ch3_vol >> 5) & 0b11;  // 0b00, 0b01, 0b10, or 0b11
     u8 shift_amount = ch3_vol_shift_map[output_level]; // 0, 100, 50, or 25% vol
     u8 wave_bit_vol = (ch3_get_wave_nibble(0)) >> shift_amount; // 1 or 0
     float wave_bit_zero_output_vol = ((float)wave_bit_vol / 7.5f) - 1.0f;
     wave_bit_zero_output_vol = (wave_bit_zero_output_vol + 1) * (io.master_vol.vol_left + 1)/8 - 1;
-    
+
     wave_bit_vol = (ch3_get_wave_nibble(1)) >> shift_amount; // 1 or 0
     float wave_bit_one_output_vol = ((float)wave_bit_vol / 7.5f) - 1.0f;
     wave_bit_one_output_vol = (wave_bit_one_output_vol + 1) * (io.master_vol.vol_left + 1)/8 - 1;
