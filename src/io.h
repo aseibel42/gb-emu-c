@@ -154,7 +154,7 @@ struct io {
     u8 ch3_len; // 0xFF1b
     u8 ch3_vol; // 0xFF1c
     u8 ch3_freq; // 0xFF1d
-    u8 ch3_ctrl; // 0xFF1e
+    ch_ctrl ch3_ctrl; // 0xFF1e
     u8 ch4_sweep; // 0xFF1f - Not used
     u8 ch4_len; // 0xFF20
     u8 ch4_vol; // 0xFF21

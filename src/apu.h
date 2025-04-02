@@ -43,28 +43,50 @@ typedef struct {
     ch_ctrl *ch_ctrl;
 } SquareChannel;
 
+// Wave Channel struct
+typedef struct {
+    u16 period_counter;
+    u16 length_counter;
+    u8 wave_duty_bit_counter;
+
+    u8 current_vol;
+    bool dac_enable;
+
+    float *source_sample_buffer;
+    AudioBuffer *target_sample_buffer; 
+    u16 trigger_index;
+} WaveChannel;
+
 // general
 void apu_init();
 SquareChannel init_square_channel(u8 ch_num);
+WaveChannel init_wave_channel();
 void apu_tick();
 
 void period_counter_tick();
 void square_period_counter_tick(SquareChannel *ch);
+void wave_period_counter_tick();
 
 void frame_sequence_tick();
 void length_counter_tick();
 void square_length_counter_tick(SquareChannel *ch);
+void wave_length_counter_tick();
 void volume_envelope_tick();
 void square_vol_env_tick(SquareChannel *ch);
 void sweep_tick();
 
 void square_trigger(SquareChannel *ch);
+void ch3_trigger();
 void square_handle_volume_write(SquareChannel *ch);
 
 // audio buffer
 void generate_source_audio_samples(SquareChannel *ch);
+void ch3_generate_source_audio_samples();
+u8 ch3_get_wave_nibble(u8 index);
 void resample_audio();
 void queue_audio();
 
 u16 find_trigger_point(float buffer[]);
-void mix_buffers(const float *ch1, const float *ch2, float *result);
+u16 ch3_find_trigger_point(float buffer[]);
+u16 ch3_find_trigger_min(float buffer[]);
+void mix_buffers(const float *ch1, const float *ch2, const float *ch3, float *result);

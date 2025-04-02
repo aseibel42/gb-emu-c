@@ -2,7 +2,7 @@
 #include "timer.h"
 
 union buttons btns = {0};
-struct io io = {};
+struct io io = {0};
 
 void io_init() {
     // -- Gamepad --
@@ -53,7 +53,7 @@ void io_init() {
     io.ch3_len = 0xFF;
     io.ch3_vol = 0x9F;
     io.ch3_freq = 0xFF;
-    io.ch3_ctrl = 0xBF;
+    io.ch3_ctrl.value = 0xBF;
     io.ch4_len = 0xFF;
     io.ch4_vol = 0x00;
     io.ch4_freq = 0x00;

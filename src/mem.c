@@ -18,6 +18,7 @@ static u8 oam[0xA0] = {0};
 
 extern SquareChannel ch1;
 extern SquareChannel ch2;
+extern WaveChannel ch3;
 
 void mem_init() {
     // Video RAM
@@ -156,6 +157,22 @@ void mem_write(u16 addr, u8 value) {
             // if bit 7 of ch2_ctrl reg gets sit, then call trigger()
             if(io.ch2_ctrl.trigger) {
                 square_trigger(&ch2);
+            }
+        } else if (addr == 0xFF1A) { // ch3 sweep
+            // write to ch3 sweep register
+            io.ch3_sweep = value;
+            // set dac enable
+            ch3.dac_enable = (value >> 7) & 1;
+        } else if (addr == 0xFF1B) { // ch3 len
+            // write to ch3 length register
+            io.ch3_len = value;
+            // set current_len to initial value 
+            ch3.length_counter = value;
+        } else if (addr == 0xFF1E) { // ch3 ctrl
+            io.ch3_ctrl.value = value;
+            // if bit 7 of ch2_ctrl reg gets sit, then call trigger()
+            if(io.ch3_ctrl.trigger) {
+                ch3_trigger();
             }
         } else if (addr == 0xFF46) {
             // Writing anything to DMA register starts a DMA transfer to OAM
