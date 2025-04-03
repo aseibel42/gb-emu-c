@@ -64,7 +64,7 @@ $(OUTDIR) $(OBJDIR):
 
 # Run the executable
 run: $(OUTDIR)$(EXE)
-	@$<
+	@$< "$(rom)"
 
 # Run tests
 test-timings: $(TESTDIR)$(UNITY) $(TESTDIR)$(T_TIME)
