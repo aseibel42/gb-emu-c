@@ -22,10 +22,21 @@ OBJEXT := .o
 EXE := emu
 
 # Flags, libraries, and includes
-CFLAGS := -Wall -Wextra -std=c11
-LDFLAGS := -L./lib
-LDLIBS := -lSDL2
-INCS :=
+CFLAGS := -Wall -Wextra -std=c11 -O2
+
+ifdef OS
+    ifeq ($(OS), Windows_NT)
+        # Windows settings
+        LDFLAGS := -L./lib/sdl2/lib
+        LDLIBS := -lmingw32 -lSDL2main -lSDL2
+        INCS := -I./lib/sdl2/include -I"C:/msys64/mingw64/include"
+    endif
+else
+    # Linux settings
+    LDFLAGS := -L./lib
+    LDLIBS := -lSDL2
+    INCS :=
+endif
 
 # Testing related
 TESTDIR := ./test/
