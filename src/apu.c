@@ -1,3 +1,4 @@
+#include <string.h>
 #include <SDL2/SDL.h>
 #include <stdio.h>
 
@@ -15,6 +16,7 @@ u8 apu_speed_counter = 0;
 SquareChannel ch1 = {0};
 SquareChannel ch2 = {0};
 WaveChannel ch3 = {0};
+NoiseChannel ch4 = {0};
 
 // Audio buffer
 u16 source_buffer_count = 0;
@@ -63,6 +65,7 @@ void apu_init() {
     ch1 = init_square_channel(1);
     ch2 = init_square_channel(2);
     ch3 = init_wave_channel();
+    ch4 = init_noise_channel();
 
     // Initialize and zero out the combined target buffer
     combined_target_buffer = malloc(TARGET_FRAMES * 2 * sizeof(float));
@@ -153,6 +156,38 @@ WaveChannel init_wave_channel() {
     return ch;  // Return the initialized struct
 }
 
+// Function to initialize a SquareChannel struct
+NoiseChannel init_noise_channel() {
+    NoiseChannel ch = {0}; // Zero-initialize the struct
+
+    // Set default values
+    ch.period_counter = 0;
+    ch.length_counter = 0;
+    ch.vol_env_counter = 0;
+
+    ch.current_vol = 0;
+    ch.dac_enable = true;
+    ch.vol_env_enable = false;
+
+    ch.lfsr = 0x7FFF; // 15-bit register is all 1s
+
+    ch.trigger_index = TARGET_FRAMES + (TARGET_FRAMES / 2);
+
+    // Allocate buffers on the heap
+    ch.source_sample_buffer = malloc(SOURCE_BUFFER_SIZE * 2 * sizeof(float));
+    ch.target_sample_buffer = malloc(sizeof(AudioBuffer));
+
+    // Check for allocation failure
+    if (!ch.source_sample_buffer || !ch.target_sample_buffer) {
+        printf("Error: Failed to allocate memory for buffers\n");
+    }
+
+    // Initialize target buffer
+    memset(ch.target_sample_buffer, -1, sizeof(AudioBuffer));
+
+    return ch;  // Return the initialized struct
+}
+
 // APU ticks once every M-cycle
 void apu_tick() {
     // Increment period counter
@@ -169,6 +204,7 @@ void apu_tick() {
             generate_source_audio_samples(&ch1);
             generate_source_audio_samples(&ch2);
             ch3_generate_source_audio_samples();
+            ch4_generate_source_audio_samples();
             source_buffer_count++;
         }
         sample_tick_counter = 0; // reset counter
@@ -181,6 +217,7 @@ void period_counter_tick() {
     square_period_counter_tick(&ch2);
     wave_period_counter_tick();
     wave_period_counter_tick(); // wave period counter happens 2x the freq of other period counters
+    noise_period_counter_tick();
 }
 
 void square_period_counter_tick(SquareChannel *ch) {
@@ -198,6 +235,32 @@ void wave_period_counter_tick() {
         u16 period = ((u16)io.ch3_ctrl.period << 8) | io.ch3_freq;
         ch3.period_counter = period;
         ch3.wave_duty_bit_counter = (ch3.wave_duty_bit_counter + 1) & 0b11111; // 0-31
+    }
+}
+
+void noise_period_counter_tick() {
+    ch4.period_counter--;
+    if(!ch4.period_counter) {
+        // Tick LFSR
+        // XOR bit 0 and bit 1
+        u8 xor_result = ((ch4.lfsr & 1) ^ ((ch4.lfsr >> 1) & 1));
+
+        // Shift the register
+        ch4.lfsr >>= 1;
+
+        // Set bit 14 to the XOR result
+        ch4.lfsr |= (xor_result << 14);
+
+        // If width_mode is enabled (7-bit mode), also set bit 6
+        if (io.ch4_freq.width) {
+            ch4.lfsr &= ~(1 << 6);  // Clear bit 6
+            ch4.lfsr |= (xor_result << 6);  // Set bit 6 to xor_result
+        }
+
+        // Reset period counter
+        u8 divisor = io.ch4_freq.divider << 2; // divisor = 4 x divider
+        if(!divisor) divisor = 2;              // but divisor = 2 when divider = 0
+        ch4.period_counter = (u32)divisor << io.ch4_freq.shift;
     }
 }
 
@@ -222,6 +285,7 @@ void length_counter_tick() {
     square_length_counter_tick(&ch1);
     square_length_counter_tick(&ch2);
     wave_length_counter_tick();
+    noise_length_counter_tick();
 }
 
 void square_length_counter_tick(SquareChannel *ch) {
@@ -244,10 +308,21 @@ void wave_length_counter_tick() {
     }
 }
 
+void noise_length_counter_tick() {
+    // Length counter ticks up to 64.  If it reaches 64, turn channel off
+    if (ch4.length_counter < 64 && io.ch4_ctrl.length_enable) {
+        ch4.length_counter++;
+        if (ch4.length_counter > 63) {
+            io.master_ctrl.ch4_enable = 0; // turn ch off by setting appropriate master ctrl bit to 0
+        }
+    }
+}
+
 // Call at 64 Hz - once every 16384 M-cycles
 void volume_envelope_tick() {
     square_vol_env_tick(&ch1);
     square_vol_env_tick(&ch2);
+    noise_vol_env_tick();
 }
 
 void square_vol_env_tick(SquareChannel *ch) {
@@ -280,6 +355,36 @@ void square_vol_env_tick(SquareChannel *ch) {
     }
 }
 
+void noise_vol_env_tick() {
+    // env should be disabled if pace = 0
+    if(ch4.vol_env_enable && io.master_ctrl.ch4_enable) {
+        ch4.vol_env_counter++;
+
+        // Every time that vol_evn pace (1-7) is reached, change volume
+        // add 1 to volume if direction bit set, sub 1 if not set
+        if(ch4.vol_env_counter == io.ch4_vol.pace) {
+            // Reset envelope counter once pace is reached
+            ch4.vol_env_counter = 0;
+
+            // If direction bit is set then crescendo, otherwise decrescendo.  Lock vol between 0 and 15
+            if (io.ch4_vol.dir) {
+                if (ch4.current_vol < 15) {
+                    ch4.current_vol++;
+                }
+            } else {
+                if (ch4.current_vol > 0) {
+                    ch4.current_vol--;
+                }
+            }
+
+            // Disable vol_env if volume reaches 0 or 15
+            if (ch4.current_vol == 0 || ch4.current_vol == 15) {
+                ch4.vol_env_enable = false;
+            }
+        }
+    }
+}
+
 void sweep_tick() {
 
 }
@@ -302,7 +407,6 @@ void square_trigger(SquareChannel *ch) {
 
     // reset current volume to initial volume in NRX2
     ch->current_vol = ch->ch_vol->init_vol;
-
 }
 
 void ch3_trigger() {
@@ -322,6 +426,30 @@ void ch3_trigger() {
     ch3.wave_duty_bit_counter = 0;
 }
 
+void noise_trigger() {
+    // enable ch4 on master_ctrl register
+    io.master_ctrl.ch4_enable = true;
+
+    // if length timer is expired, reset it to initial value stored in NRX1
+    if (ch4.length_counter >= 64) {
+        ch4.length_counter = (io.ch4_len & 0b111111);
+    }
+
+    // reset period counter (based on divider and shift in NR43)
+    u8 divisor = io.ch4_freq.divider << 2; // divisor = 4 x divider
+    if(!divisor) divisor = 2;              // but divisor = 2 when divider = 0
+    ch4.period_counter = (u32)divisor << io.ch4_freq.shift;
+
+    // reset volume envelope timer
+    ch4.vol_env_counter = 0;
+
+    // reset current volume to initial volume in NRX2
+    ch4.current_vol = io.ch4_vol.init_vol;
+
+    // reset LFSR
+    ch4.lfsr = 0x7FFF;
+}
+
 void square_handle_volume_write(SquareChannel *ch) {
     // dac gets disabled if upper 5 bits of NRX2 are all 0
     ch->dac_enable = ((ch->ch_vol->value & 0xF8) != 0);
@@ -334,6 +462,20 @@ void square_handle_volume_write(SquareChannel *ch) {
 
     // set ch current_volume to this vol register's init vol
     ch->current_vol = ch->ch_vol->init_vol;
+}
+
+void noise_handle_volume_write() {
+    // dac gets disabled if upper 5 bits of NRX2 are all 0
+    ch4.dac_enable = ((io.ch4_vol.value & 0xF8) != 0);
+
+    // enable ch vol envelope if pace > 0
+    ch4.vol_env_enable = io.ch4_vol.pace;
+
+    // set ch vol envelope counter to 0
+    ch4.vol_env_counter = 0;
+
+    // set ch current_volume to this vol register's init vol
+    ch4.current_vol = io.ch4_vol.init_vol;
 }
 
 void generate_source_audio_samples(SquareChannel *ch) {
@@ -353,9 +495,12 @@ void generate_source_audio_samples(SquareChannel *ch) {
     bool left_pan = (io.master_pan.value >> ch->master_vol_left_bit) & 1;
     bool right_pan = (io.master_pan.value >> ch->master_vol_right_bit) & 1;
 
+    // channel enable
+    bool ch_enable = (io.master_ctrl.value >> ch->master_ctrl_bit) & 1;
+
     // if channel enabled, dac enabled, and waveduty bit is 1, set sample value to calc. output vol, otherwise set to -1 (first L, then R)
-    ch->source_sample_buffer[2*source_buffer_count] = (left_pan && ch->dac_enable && wave_bit) ? ch_left_output_volume : -1;
-    ch->source_sample_buffer[2*source_buffer_count+1] = (right_pan && ch->dac_enable && wave_bit) ? ch_right_output_volume : -1;
+    ch->source_sample_buffer[2*source_buffer_count] = (left_pan && ch->dac_enable && ch_enable && wave_bit) ? ch_left_output_volume : -1;
+    ch->source_sample_buffer[2*source_buffer_count+1] = (right_pan && ch->dac_enable && ch_enable && wave_bit) ? ch_right_output_volume : -1;
 }
 
 void ch3_generate_source_audio_samples() {
@@ -373,12 +518,12 @@ void ch3_generate_source_audio_samples() {
     float ch_right_output_volume = (ch_output_volume + 1) * (io.master_vol.vol_right + 1)/8 - 1;
 
     // left and right vol pan (true or false)
-    bool left_pan = (io.master_pan.value >> io.master_vol.vol_left) & 1;
-    bool right_pan = (io.master_pan.value >> io.master_vol.vol_right) & 1;
+    bool left_pan = io.master_pan.ch3_left;
+    bool right_pan = io.master_pan.ch3_right;
 
     // if channel enabled, dac enabled, and waveduty bit is 1, set sample value to calc. output vol, otherwise set to -1 (first L, then R)
-    ch3.source_sample_buffer[2*source_buffer_count] = (left_pan && ch3.dac_enable) ? ch_left_output_volume : -1;
-    ch3.source_sample_buffer[2*source_buffer_count+1] = (right_pan && ch3.dac_enable) ? ch_right_output_volume : -1;
+    ch3.source_sample_buffer[2*source_buffer_count] = (left_pan && ch3.dac_enable && io.master_ctrl.ch3_enable) ? ch_left_output_volume : -1;
+    ch3.source_sample_buffer[2*source_buffer_count+1] = (right_pan && ch3.dac_enable && io.master_ctrl.ch3_enable) ? ch_right_output_volume : -1;
 }
 
 u8 ch3_get_wave_nibble(u8 index) {
@@ -403,12 +548,33 @@ u8 ch3_get_wave_nibble(u8 index) {
     }
 }
 
+void ch4_generate_source_audio_samples() {
+    // Volume = current volume if last bit of LFSR is 1, Volume = 0 if last bit is 0
+    bool lfsr_bit_enable = !(ch4.lfsr & 1); // should this really be inverted?
+
+    // Rescale output volume (0 -> -1, 15 -> 1)
+    float ch_output_volume = ((float)ch4.current_vol / 7.5f) - 1.0f;
+
+    // scale volume based on master left and right volume (value of 0-7 refers to vol level of 1-8, divide by 8 to rescale between -1 and 1)
+    float ch_left_output_volume = (ch_output_volume + 1) * (io.master_vol.vol_left + 1)/8 - 1;
+    float ch_right_output_volume = (ch_output_volume + 1) * (io.master_vol.vol_right + 1)/8 - 1;
+
+    // left and right vol pan (true or false)
+    bool left_pan = io.master_pan.ch4_left;
+    bool right_pan = io.master_pan.ch4_right;
+
+    // if channel enabled, dac enabled, and waveduty bit is 1, set sample value to calc. output vol, otherwise set to -1 (first L, then R)
+    ch4.source_sample_buffer[2*source_buffer_count] = (left_pan && ch4.dac_enable && io.master_ctrl.ch4_enable && lfsr_bit_enable) ? ch_left_output_volume : -1;
+    ch4.source_sample_buffer[2*source_buffer_count+1] = (right_pan && ch4.dac_enable && io.master_ctrl.ch4_enable && lfsr_bit_enable) ? ch_right_output_volume : -1;
+}
+
 // resample audio from source sample rate (262144 Hz) to sample rate of audio device (48000 Hz)
 void resample_audio() {
     // Save new buffer as previous buffer for next iteration
     memcpy(ch1.target_sample_buffer->prev, ch1.target_sample_buffer->curr, sizeof(float) * TARGET_FRAMES * 2);
     memcpy(ch2.target_sample_buffer->prev, ch2.target_sample_buffer->curr, sizeof(float) * TARGET_FRAMES * 2);
     memcpy(ch3.target_sample_buffer->prev, ch3.target_sample_buffer->curr, sizeof(float) * TARGET_FRAMES * 2);
+    memcpy(ch4.target_sample_buffer->prev, ch4.target_sample_buffer->curr, sizeof(float) * TARGET_FRAMES * 2);
     // printf("source_buffer_count: %d\n",source_buffer_count);
 
     // find number of source frames per target frame - (262144/48000 ~ 5.46)
@@ -436,6 +602,9 @@ void resample_audio() {
         ch3.target_sample_buffer->curr[2 * i] = ch3.source_sample_buffer[src_pos] * (1.0f - frac) + ch3.source_sample_buffer[next_src_pos] * frac;
         ch3.target_sample_buffer->curr[2 * i + 1] = ch3.source_sample_buffer[src_pos + 1] * (1.0f - frac) + ch3.source_sample_buffer[next_src_pos + 1] * frac;
 
+        ch4.target_sample_buffer->curr[2 * i] = ch4.source_sample_buffer[src_pos] * (1.0f - frac) + ch4.source_sample_buffer[next_src_pos] * frac;
+        ch4.target_sample_buffer->curr[2 * i + 1] = ch4.source_sample_buffer[src_pos + 1] * (1.0f - frac) + ch4.source_sample_buffer[next_src_pos + 1] * frac;
+
         // increment index (location of target sample relative to source samples)
         index += step;
     }
@@ -444,6 +613,7 @@ void resample_audio() {
     ch1.trigger_index = find_trigger_point(ch1.target_sample_buffer->combined);
     ch2.trigger_index = find_trigger_point(ch2.target_sample_buffer->combined);
     ch3.trigger_index = ch3_find_trigger_point(ch3.target_sample_buffer->combined);
+    // ch4.trigger_index = find_trigger_point(ch4.target_sample_buffer->combined);
 
     // Reset source sample buffer
     source_buffer_count = 0;
@@ -451,7 +621,7 @@ void resample_audio() {
 
 void queue_audio() {
     // mix audio
-    mix_buffers(ch1.target_sample_buffer->curr, ch2.target_sample_buffer->curr, ch3.target_sample_buffer->curr, combined_target_buffer);
+    mix_buffers(ch1.target_sample_buffer->curr, ch2.target_sample_buffer->curr, ch3.target_sample_buffer->curr, ch4.target_sample_buffer->curr, combined_target_buffer);
 
     // Add samples from buffer to audio queue (but not if queue is too large)
     while (SDL_GetQueuedAudioSize(dev) > 4 * TARGET_FRAMES * 2 * sizeof(float)) {
@@ -487,15 +657,17 @@ u16 ch3_find_trigger_point(float buffer[]) {
     float wave_bit_one_output_vol = ((float)wave_bit_vol / 7.5f) - 1.0f;
     wave_bit_one_output_vol = (wave_bit_one_output_vol + 1) * (io.master_vol.vol_left + 1)/8 - 1;
 
-    int start = TARGET_FRAMES / 2;  // Middle of prev buffer
-    int end = TARGET_FRAMES + (TARGET_FRAMES / 2);  // Middle of new buffer
     // find trigger point
-    for (int i = end; i > start; i--) {
-        if (buffer[i * 2] == wave_bit_one_output_vol && buffer[(i - 1) * 2] == wave_bit_zero_output_vol) { // Zero-crossing (left channel)
-            return i - 1;
+    if (wave_bit_one_output_vol > wave_bit_zero_output_vol) {
+        int start = TARGET_FRAMES / 2;  // Middle of prev buffer
+        int end = TARGET_FRAMES + (TARGET_FRAMES / 2);  // Middle of new buffer
+        for (int i = end; i > start; i--) {
+            if (buffer[i * 2] == wave_bit_one_output_vol && buffer[(i - 1) * 2] == wave_bit_zero_output_vol) { // Zero-crossing (left channel)
+                return i - 1;
+            }
         }
     }
-
+    // printf("no trigger found\n");
     return ch3_find_trigger_min(ch3.target_sample_buffer->combined); // If wave beginning not found, try different triggering method
 }
 
@@ -516,12 +688,13 @@ u16 ch3_find_trigger_min(float buffer[]) {
             return i;
         }
     }
+
     return end; // Default: no trigger found, use end of middle section
 }
 
 // Function to mix audio buffers (average them)
-void mix_buffers(const float *ch1, const float *ch2, const float *ch3, float *result) {
+void mix_buffers(const float *ch1, const float *ch2, const float *ch3, const float *ch4, float *result) {
     for (int i = 0; i < TARGET_FRAMES * 2; i++) {
-        result[i] = (ch1[i] + ch2[i] + ch3[i]) / 3.0f;
+        result[i] = (ch1[i] + ch2[i] + ch3[i] + ch4[i]) / 4.0f;
     }
 }

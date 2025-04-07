@@ -69,6 +69,16 @@ typedef union {
     u8 value;
 } ch_vol;
 
+// Flags of ch4 freq register
+typedef union {
+    struct {
+        u8 divider : 3;
+        u8 width : 1;
+        u8 shift : 4;
+    };
+    u8 value;
+} ch_freq;
+
 // Flags of ch2 ctrl register
 typedef union {
     struct {
@@ -157,9 +167,9 @@ struct io {
     ch_ctrl ch3_ctrl; // 0xFF1e
     u8 ch4_sweep; // 0xFF1f - Not used
     u8 ch4_len; // 0xFF20
-    u8 ch4_vol; // 0xFF21
-    u8 ch4_freq; // 0xFF22
-    u8 ch4_ctrl; // 0xFF23
+    ch_vol ch4_vol; // 0xFF21
+    ch_freq ch4_freq; // 0xFF22
+    ch_ctrl ch4_ctrl; // 0xFF23
     audio_vol master_vol; // 0xFF24
     audio_pan master_pan; // 0xFF25
     audio_ctrl master_ctrl; // 0xFF26

@@ -55,9 +55,9 @@ void io_init() {
     io.ch3_freq = 0xFF;
     io.ch3_ctrl.value = 0xBF;
     io.ch4_len = 0xFF;
-    io.ch4_vol = 0x00;
-    io.ch4_freq = 0x00;
-    io.ch4_ctrl = 0xBF;
+    io.ch4_vol.value = 0x00;
+    io.ch4_freq.value = 0x00;
+    io.ch4_ctrl.value = 0xBF;
     io.master_vol.value = 0x77;
     io.master_pan.value = 0xF3;
     io.master_ctrl.value = 0xF1;

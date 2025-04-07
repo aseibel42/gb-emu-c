@@ -19,6 +19,7 @@ static u8 oam[0xA0] = {0};
 extern SquareChannel ch1;
 extern SquareChannel ch2;
 extern WaveChannel ch3;
+extern NoiseChannel ch4;
 
 void mem_init() {
     // Video RAM
@@ -137,7 +138,7 @@ void mem_write(u16 addr, u8 value) {
             ch1.length_counter = (io.ch1_len & 0b111111);
         } else if (addr == 0xFF12) { // ch1 vol
             io.ch1_vol.value = value;
-            square_handle_volume_write(&ch1);  
+            square_handle_volume_write(&ch1);
         } else if (addr == 0xFF14) { // ch1 ctrl
             io.ch1_ctrl.value = value;
             // if bit 7 of ch1_ctrl reg gets sit, then call trigger()
@@ -151,7 +152,7 @@ void mem_write(u16 addr, u8 value) {
             ch2.length_counter = (io.ch2_len & 0b111111);
         } else if (addr == 0xFF17) { // ch2 vol
             io.ch2_vol.value = value;
-            square_handle_volume_write(&ch2); 
+            square_handle_volume_write(&ch2);
         } else if (addr == 0xFF19) { // ch2 ctrl
             io.ch2_ctrl.value = value;
             // if bit 7 of ch2_ctrl reg gets sit, then call trigger()
@@ -166,13 +167,27 @@ void mem_write(u16 addr, u8 value) {
         } else if (addr == 0xFF1B) { // ch3 len
             // write to ch3 length register
             io.ch3_len = value;
-            // set current_len to initial value 
+            // set current_len to initial value
             ch3.length_counter = value;
         } else if (addr == 0xFF1E) { // ch3 ctrl
             io.ch3_ctrl.value = value;
             // if bit 7 of ch2_ctrl reg gets sit, then call trigger()
             if(io.ch3_ctrl.trigger) {
                 ch3_trigger();
+            }
+        } else if (addr == 0xFF20) { // ch4 len
+            // write to ch3 length register
+            io.ch4_len = value;
+            // set current_len to initial value
+            ch4.length_counter = (io.ch4_len & 0b111111);
+        } else if (addr == 0xFF21) { // ch4 vol
+            io.ch4_vol.value = value;
+            noise_handle_volume_write();
+        } else if (addr == 0xFF23) { // ch4 ctrl
+            io.ch4_ctrl.value = value;
+            // if bit 7 of ch4_ctrl reg gets sit, then call trigger()
+            if(io.ch4_ctrl.trigger) {
+                noise_trigger();
             }
         } else if (addr == 0xFF46) {
             // Writing anything to DMA register starts a DMA transfer to OAM
