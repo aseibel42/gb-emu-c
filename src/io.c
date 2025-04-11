@@ -40,7 +40,7 @@ void io_init() {
     io.win_x = 0x00;
 
     // -- Audio --
-    io.ch1_sweep = 0x80;
+    io.ch1_sweep.value = 0x80;
     io.ch1_len = 0xBF;
     io.ch1_vol.value = 0xF3;
     io.ch1_freq = 0xFF;

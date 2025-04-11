@@ -30,6 +30,9 @@ typedef struct {
     bool dac_enable;
     bool vol_env_enable;
 
+    u8 sweep_env_counter;
+    bool sweep_env_enable;
+
     float *source_sample_buffer;
     AudioBuffer *target_sample_buffer;
     u16 trigger_index;
@@ -98,6 +101,7 @@ void noise_vol_env_tick();
 void sweep_tick();
 
 void square_trigger(SquareChannel *ch);
+void ch1_sweep_trigger();
 void ch3_trigger();
 void noise_trigger();
 void square_handle_volume_write(SquareChannel *ch);

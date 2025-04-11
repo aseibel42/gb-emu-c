@@ -144,6 +144,7 @@ void mem_write(u16 addr, u8 value) {
             // if bit 7 of ch1_ctrl reg gets sit, then call trigger()
             if(io.ch1_ctrl.trigger) {
                 square_trigger(&ch1);
+                ch1_sweep_trigger();
             }
         } else if (addr == 0xFF16) { // ch2 len
             // write to ch2 length register

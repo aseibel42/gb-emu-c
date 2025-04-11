@@ -59,6 +59,17 @@ typedef union {
     u8 value;
 } lcd_stat;
 
+// Bits of ch1 sweep register
+typedef union {
+    struct {
+        u8 step : 3;
+        u8 dir : 1;
+        u8 pace : 3;
+        u8 : 1;
+    };
+    u8 value;
+} ch_sweep;
+
 // Flags of ch2 volume register
 typedef union {
     struct {
@@ -150,7 +161,7 @@ struct io {
     u8 if_reg; // 0xFF0F
 
     // audio
-    u8 ch1_sweep; // 0xFF10
+    ch_sweep ch1_sweep; // 0xFF10
     u8 ch1_len; // 0xFF11
     ch_vol ch1_vol; // 0xFF12
     u8 ch1_freq; // 0xFF13

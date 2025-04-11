@@ -89,6 +89,9 @@ SquareChannel init_square_channel(u8 ch_num) {
     ch.dac_enable = true;
     ch.vol_env_enable = false;
 
+    ch.sweep_env_counter = 0;
+    ch.sweep_env_enable = false;
+
     ch.trigger_index = TARGET_FRAMES + (TARGET_FRAMES / 2);
 
     // Allocate buffers on the heap
@@ -386,7 +389,43 @@ void noise_vol_env_tick() {
 }
 
 void sweep_tick() {
+    if(ch1.sweep_env_enable && io.master_ctrl.ch1_enable) {
+        ch1.sweep_env_counter++;
 
+        // Every time that sweep_env pace (1-7) is reached, change period
+        if(ch1.sweep_env_counter == io.ch1_sweep.pace) {
+            // Reset envelope counter once pace is reached
+            ch1.sweep_env_counter = 0;
+
+            // Calculate change in period based on step size
+            u16 period = ((u16)io.ch1_ctrl.period << 8) | io.ch1_freq;
+            u16 delta = period >> io.ch1_sweep.step;
+
+            // If direction bit is set then subtract, otherwise add
+            i16 new_period = 0;
+            if (io.ch1_sweep.dir) {
+                new_period = period - delta;
+                if (new_period <= 0) {
+                    new_period = 0;
+                    io.master_ctrl.ch1_enable = false;
+                }
+            } else {
+                new_period = period + delta;
+                if (new_period > 0x7FF) {
+                    new_period = 0x7FF;
+                    io.master_ctrl.ch1_enable = false;
+                }
+            }
+
+            // reset period counter
+            ch1.period_counter = new_period;
+            // printf("new period %d\n",new_period);
+
+            // rewrite NR13 and NR14
+            io.ch1_freq = (new_period & 0xFF);
+            io.ch1_ctrl.period = (new_period >> 8) & 0b111;
+        }
+    }
 }
 
 void square_trigger(SquareChannel *ch) {
@@ -407,6 +446,16 @@ void square_trigger(SquareChannel *ch) {
 
     // reset current volume to initial volume in NRX2
     ch->current_vol = ch->ch_vol->init_vol;
+}
+
+void ch1_sweep_trigger() {
+    // reset sweep envelope timer
+    ch1.sweep_env_counter = 0;
+
+    // enable ch sweep envelope if pace > 0 or step > 0
+    ch1.sweep_env_enable = (io.ch1_sweep.pace || io.ch1_sweep.step);
+
+    // TODO: check overflow again?
 }
 
 void ch3_trigger() {
