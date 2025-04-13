@@ -10,10 +10,11 @@
 #include "apu.h"
 #include "ui.h"
 
-static bool quit = false;
+bool quit = false;
 int cpu_speed = 1;
 static bool cpu_speed_up_flag = false;
 static bool cpu_speed_down_flag = false;
+bool cpu_game_running_flag = false;
 
 // precision timer variables
 // Uint64 current_time = 0;
@@ -30,7 +31,7 @@ void* cpu_process(void* ptr) {
 
     printf("CPU INIT\n");
 
-    while (!quit) {
+    while (!quit && cpu_game_running_flag) {
         // Wait for the UI to render a frame
         pthread_mutex_lock(&ui_lock);
         while (!quit && frames_queued >= cpu_speed) {
@@ -58,7 +59,7 @@ void* cpu_process(void* ptr) {
     return ptr;
 }
 
-void emu_run(char* filename) {
+void cart_run(char* filename) {
     cart_load(filename);
 
     // initialize timers
@@ -96,7 +97,7 @@ void emu_run(char* filename) {
     pthread_cond_signal(&ui_cond);
     pthread_mutex_unlock(&ui_lock);
 
-    while(!quit) {
+    while(!quit && cpu_game_running_flag) {
 
         // Listen for user input
         ui_handle_events();
@@ -161,4 +162,8 @@ void emu_speed_up() {
 
 void emu_speed_down() {
     cpu_speed_down_flag = true;
+}
+
+void emu_quit_game() {
+    cpu_game_running_flag = false;
 }

@@ -6,7 +6,7 @@
 
 
 #define M_CYCLES_PER_FRAME 17556
-#define SOURCE_SAMPLE_RATE (M_CYCLES_PER_FRAME / 4 * (int)MAX_FPS) // 263340
+#define SOURCE_SAMPLE_RATE (int)(M_CYCLES_PER_FRAME / 4 * (int)MAX_FPS) // 263340
 #define TARGET_SAMPLE_RATE 48000 // Playback sample rate (Hz)
 #define SOURCE_BUFFER_SIZE 4389  // Number of source audio samples per frames
 #define TARGET_FRAMES (((int)SOURCE_BUFFER_SIZE * TARGET_SAMPLE_RATE) / SOURCE_SAMPLE_RATE)

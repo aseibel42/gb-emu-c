@@ -27,14 +27,14 @@ CFLAGS := -Wall -Wextra -std=c11 -O2
 ifdef OS
     ifeq ($(OS), Windows_NT)
         # Windows settings
-        LDFLAGS := -L./lib/sdl2/lib
-        LDLIBS := -lmingw32 -lSDL2main -lSDL2
-        INCS := -I./lib/sdl2/include -I"C:/msys64/mingw64/include"
+        LDFLAGS := -L./lib/sdl2/lib -L./lib/sdl2_ttf/lib
+        LDLIBS := -lmingw32 -lSDL2main -lSDL2 -lSDL2_ttf
+        INCS := -I./lib/sdl2/include -I./lib/sdl2/include/sdl2 -I./lib/sdl2_ttf/include -I"C:/msys64/mingw64/include"
     endif
 else
     # Linux settings
     LDFLAGS := -L./lib
-    LDLIBS := -lSDL2
+    LDLIBS := -lSDL2 -lSDL2_ttf
     INCS :=
 endif
 
@@ -75,7 +75,7 @@ $(OUTDIR) $(OBJDIR):
 
 # Run the executable
 run: $(OUTDIR)$(EXE)
-	@$< "$(rom)"
+	@$<
 
 # Run tests
 test-timings: $(TESTDIR)$(UNITY) $(TESTDIR)$(T_TIME)
