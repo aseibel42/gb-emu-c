@@ -396,10 +396,10 @@ void ui_update_audio_window() {
     // Draw ch1 (left-only)
     SDL_SetRenderDrawColor(sdlRenderer, 0, 255, 0, 255); // Green
     int x1 = 0;
-    int y1 = AUDIO_WINDOW_HEIGHT / 8 - ch1.target_sample_buffer->combined[(ch1_shift) * 2] * (AUDIO_WINDOW_HEIGHT / 8);
+    int y1 = (int)(AUDIO_WINDOW_HEIGHT / 8) - ch1.target_sample_buffer->combined[(ch1_shift) * 2] * (int)(AUDIO_WINDOW_HEIGHT / 8);
     for (int i = 1; i < TARGET_FRAMES; i++) {
         int x2 = i * AUDIO_WINDOW_WIDTH / (TARGET_FRAMES);
-        int y2 = AUDIO_WINDOW_HEIGHT / 8 - ch1.target_sample_buffer->combined[(i + ch1_shift) * 2] * (AUDIO_WINDOW_HEIGHT / 8);
+        int y2 = (int)(AUDIO_WINDOW_HEIGHT / 8) - ch1.target_sample_buffer->combined[(i + ch1_shift) * 2] * (int)(AUDIO_WINDOW_HEIGHT / 8);
         SDL_RenderDrawLine(sdlRenderer, x1, y1, x2, y2);
         x1 = x2;
         y1 = y2;
@@ -408,10 +408,10 @@ void ui_update_audio_window() {
     // Draw ch2 (left-only)
     SDL_SetRenderDrawColor(sdlRenderer, 0, 255, 255, 255); // Cyan
     x1 = 0;
-    y1 = AUDIO_WINDOW_HEIGHT * 3 / 8 - ch2.target_sample_buffer->combined[(ch2_shift) * 2] * (AUDIO_WINDOW_HEIGHT / 8);
+    y1 = (int)(AUDIO_WINDOW_HEIGHT * 3 / 8) - ch2.target_sample_buffer->combined[(ch2_shift) * 2] * (int)(AUDIO_WINDOW_HEIGHT / 8);
     for (int i = 1; i < TARGET_FRAMES; i++) {
         int x2 = i * AUDIO_WINDOW_WIDTH / TARGET_FRAMES;
-        int y2 = AUDIO_WINDOW_HEIGHT * 3 / 8 - ch2.target_sample_buffer->combined[(i + ch2_shift) * 2] * (AUDIO_WINDOW_HEIGHT / 8);
+        int y2 = (int)(AUDIO_WINDOW_HEIGHT * 3 / 8) - ch2.target_sample_buffer->combined[(i + ch2_shift) * 2] * (int)(AUDIO_WINDOW_HEIGHT / 8);
         SDL_RenderDrawLine(sdlRenderer, x1, y1, x2, y2);
         x1 = x2;
         y1 = y2;
@@ -420,10 +420,10 @@ void ui_update_audio_window() {
     // Draw ch3 (left-only)
     SDL_SetRenderDrawColor(sdlRenderer, 128, 128, 255, 255); // Magenta
     x1 = 0;
-    y1 = AUDIO_WINDOW_HEIGHT * 5 / 8 - ch3.target_sample_buffer->combined[(ch3_shift) * 2] * (AUDIO_WINDOW_HEIGHT / 8);
+    y1 = (int)(AUDIO_WINDOW_HEIGHT * 5 / 8) - ch3.target_sample_buffer->combined[(ch3_shift) * 2] * (int)(AUDIO_WINDOW_HEIGHT / 8);
     for (int i = 1; i < TARGET_FRAMES; i++) {
         int x2 = i * AUDIO_WINDOW_WIDTH / TARGET_FRAMES;
-        int y2 = AUDIO_WINDOW_HEIGHT * 5 / 8 - ch3.target_sample_buffer->combined[(i + ch3_shift) * 2] * (AUDIO_WINDOW_HEIGHT / 8);
+        int y2 = (int)(AUDIO_WINDOW_HEIGHT * 5 / 8) - ch3.target_sample_buffer->combined[(i + ch3_shift) * 2] * (int)(AUDIO_WINDOW_HEIGHT / 8);
         SDL_RenderDrawLine(sdlRenderer, x1, y1, x2, y2);
         x1 = x2;
         y1 = y2;
@@ -432,10 +432,10 @@ void ui_update_audio_window() {
     // Draw ch4 (left-only)
     SDL_SetRenderDrawColor(sdlRenderer, 255, 255, 255, 255); // White
     x1 = 0;
-    y1 = AUDIO_WINDOW_HEIGHT * 7 / 8 - ch4.target_sample_buffer->combined[(ch4_shift) * 2] * (AUDIO_WINDOW_HEIGHT / 8);
+    y1 = (int)(AUDIO_WINDOW_HEIGHT * 7 / 8) - ch4.target_sample_buffer->combined[(ch4_shift) * 2] * (int)(AUDIO_WINDOW_HEIGHT / 8);
     for (int i = 1; i < TARGET_FRAMES; i++) {
         int x2 = i * AUDIO_WINDOW_WIDTH / TARGET_FRAMES;
-        int y2 = AUDIO_WINDOW_HEIGHT * 7 / 8 - ch4.target_sample_buffer->combined[(i + ch4_shift) * 2] * (AUDIO_WINDOW_HEIGHT / 8);
+        int y2 = (int)(AUDIO_WINDOW_HEIGHT * 7 / 8) - ch4.target_sample_buffer->combined[(i + ch4_shift) * 2] * (int)(AUDIO_WINDOW_HEIGHT / 8);
         SDL_RenderDrawLine(sdlRenderer, x1, y1, x2, y2);
         x1 = x2;
         y1 = y2;
