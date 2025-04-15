@@ -12,8 +12,7 @@
 
 #define MAX_FILES 128
 #define MAX_FILENAME 256
-#define FILE_WINDOW_WIDTH 640
-#define FILE_WINDOW_HEIGHT 576
+
 #define DISPLAY_NAME_LEN 24
 
 void ui_init();

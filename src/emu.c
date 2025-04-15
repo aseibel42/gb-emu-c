@@ -97,10 +97,13 @@ void cart_run(char* filename) {
     pthread_cond_signal(&ui_cond);
     pthread_mutex_unlock(&ui_lock);
 
-    while(!quit && cpu_game_running_flag) {
+    while(!quit) {
 
         // Listen for user input
         ui_handle_events();
+        if (!cpu_game_running_flag) {
+            break;
+        }
 
         // Wait for CPU
         pthread_mutex_lock(&cpu_lock);
