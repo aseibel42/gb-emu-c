@@ -58,6 +58,12 @@ static u32 debug_palette[4] = {0xFFFFFFFF, 0xFFAAAAAA, 0xFF555555, 0xFF000000};
 
 int ui_scale = 2;
 
+void limit_fps() {
+    int delay = min_frame_duration_ms + elapsed - SDL_GetTicks();
+    if (delay > 0) SDL_Delay(delay);
+    elapsed = SDL_GetTicks();
+}
+
 void ui_init() {
     // A surface is located in RAM and can be efficiently updated on CPU
     sdlSurface = SDL_CreateRGBSurface(
@@ -270,11 +276,7 @@ void ui_request_frame() {
     // ui_update_tilemap_window(sdlTilemapSurface2, sdlTilemapRenderer2, sdlTilemapTexture2, TILEMAP2_START_ADDR);
     ui_update_audio_window();
     SDL_RenderPresent(sdlRenderer);
-
-    // Cap framerate to 60fps
-    int delay = min_frame_duration_ms + elapsed - SDL_GetTicks();
-    if (delay > 0) SDL_Delay(delay);
-    elapsed = SDL_GetTicks();
+    limit_fps();
 }
 
 u32* ui_scanline_start(u8 y) {
@@ -572,6 +574,7 @@ void choose_rom_screen(char* rom_path) {
         }
 
         SDL_RenderPresent(sdlRenderer);
+        limit_fps();
     }
 
     // return selected rom

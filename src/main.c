@@ -1,5 +1,3 @@
-#include "emu.h"
-#include <stdio.h>
 #include "ui.h"
 
 
