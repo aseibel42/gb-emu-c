@@ -31,7 +31,7 @@ extern bool interrupt_master_enabled;
 extern bool halted;
 extern bool stopped;
 
-void cpu_init();
+void cpu_init(bool);
 bool cpu_step();
 void cpu_cycle();
 

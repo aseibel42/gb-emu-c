@@ -72,7 +72,7 @@ void cart_run(char* filename) {
     if (cgb) { printf("CGB CARTRIDGE\n"); }
     else { printf("DMG CARTRIDGE\n"); }
 
-    cpu_init();
+    cpu_init(cgb);
     io_init();
     ppu_init();
     apu_init();
