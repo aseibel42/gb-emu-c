@@ -19,6 +19,11 @@ static const size_t ram_size_table[] = {
     8,  // 0x05:  64 KB
 };
 
+bool is_cgb() {
+    rom_header header = *(rom_header*)(cart.rom);
+    return (header.cgb_flag & 0x80) != 0;
+}
+
 u8 mbc_read_ram(u16 addr) {
     return bus.sram[addr];
 }

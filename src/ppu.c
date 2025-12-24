@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "cart.h"
 #include "interrupt.h"
 #include "io.h"
 #include "mem.h"
@@ -80,7 +81,9 @@ void ppu_oam_scan() {
     }
 
     // sort array so that left-most sprites are first
-    sort_net_10((u16*)line_sprites);
+    if (!is_cgb()) {
+        sort_net_10((u16*)line_sprites);
+    }
 }
 
 void ppu_draw_line() {
