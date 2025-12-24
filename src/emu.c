@@ -68,14 +68,15 @@ void cart_run(char* filename) {
     // frequency = (double)SDL_GetPerformanceFrequency();
     // delta_time = 0;
 
-    if (is_cgb()) { printf("CGB CARTRIDGE\n"); }
+    bool cgb = is_cgb();
+    if (cgb) { printf("CGB CARTRIDGE\n"); }
     else { printf("DMG CARTRIDGE\n"); }
 
     cpu_init();
     io_init();
     ppu_init();
     apu_init();
-    mem_init();
+    mem_init(cgb);
 
     cart_battery_load();
 

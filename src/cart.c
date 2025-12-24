@@ -57,7 +57,7 @@ void mbc1_reg(u16 addr, u8 value) {
             } else if (addr < 0x8000) {
                 cart.mbc_mode = value & 0x01;
             }
-            bus.sram = cart.ram + cart.mbc_mode * (cart.ram_bank * RAM_BANK_SIZE);
+            bus.sram = cart.ram + cart.mbc_mode * (cart.ram_bank * SRAM_BANK_SIZE);
         }
 
         // update rom pointers
@@ -94,7 +94,7 @@ void mbc3_reg(u16 addr, u8 value) {
         bus.rom_1 = cart.rom + cart.rom_bank * ROM_BANK_SIZE;
     } else if (addr < 0x6000) {
         cart.ram_bank = value & 0x03;
-        bus.sram = cart.ram + cart.ram_bank * RAM_BANK_SIZE;
+        bus.sram = cart.ram + cart.ram_bank * SRAM_BANK_SIZE;
     } else if (addr < 0x8000) {
         // Latch clock data?
     }
@@ -116,7 +116,7 @@ void mbc5_reg(u16 addr, u8 value) {
         bus.rom_1 = cart.rom + (cart.rom_bank | (cart.mbc_mode << 8)) * ROM_BANK_SIZE;
     } else if (addr < 0x6000) {
         cart.ram_bank = value & 0x0F;
-        bus.sram = cart.ram + cart.ram_bank * RAM_BANK_SIZE;
+        bus.sram = cart.ram + cart.ram_bank * SRAM_BANK_SIZE;
     }
 }
 
@@ -178,12 +178,12 @@ void cart_load(char *filename) {
     // allocate memory for RAM
     cart.num_ram_banks = ram_size_table[header.ram_size];
     if (cart.num_ram_banks > 0) {
-        cart.ram = malloc(cart.num_ram_banks * RAM_BANK_SIZE);
+        cart.ram = malloc(cart.num_ram_banks * SRAM_BANK_SIZE);
         if (!cart.ram) {
             perror("Failed to allocate memory for RAM\n");
             goto cleanup_ram;
         }
-        printf("RAM: %d bytes\n", cart.num_ram_banks * RAM_BANK_SIZE);
+        printf("RAM: %d bytes\n", cart.num_ram_banks * SRAM_BANK_SIZE);
     }
 
     // hookup memory regions to bus
@@ -272,7 +272,7 @@ void cart_battery_load() {
         return;
     }
 
-    fread(cart.ram, RAM_BANK_SIZE, cart.num_ram_banks, file);
+    fread(cart.ram, SRAM_BANK_SIZE, cart.num_ram_banks, file);
     fclose(file);
 }
 
@@ -285,7 +285,7 @@ void cart_battery_save() {
         return;
     }
 
-    fwrite(cart.ram, RAM_BANK_SIZE, cart.num_ram_banks, file);
+    fwrite(cart.ram, SRAM_BANK_SIZE, cart.num_ram_banks, file);
     fclose(file);
 
     printf("Save\n");

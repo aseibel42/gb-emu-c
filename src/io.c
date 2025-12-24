@@ -63,5 +63,6 @@ void io_init() {
     io.master_ctrl.value = 0xF1;
 
     // -- CGB Registers --
-    // TODO
+    io.vram_bank = 0x00;
+    io.disable_boot = 0x00;
 }

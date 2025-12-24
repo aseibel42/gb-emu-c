@@ -14,45 +14,49 @@ static u8 dma_delay = 0;
 static u8 dma_offset = 0;
 static u16 dma_source_addr = 0;
 
-static u8 oam[0xA0] = {0};
+u8 oam[0xA0] = {0};
+u8* vram = {0};
+u8* wram = {0};
 
 extern SquareChannel ch1;
 extern SquareChannel ch2;
 extern WaveChannel ch3;
 extern NoiseChannel ch4;
 
-void mem_init() {
+void mem_init(bool cgb) {
     // Video RAM
-    bus.vram = malloc(0x2000);
-    if (!bus.vram) {
+    // DMG - 16kb
+    // CGB - 32kb
+    vram = malloc(VRAM_BANK_SIZE * (cgb ? 2 : 1));
+    if (!vram) {
         perror("Failed to allocate memory for VRAM\n");
         goto cleanup_vram;
     }
 
     // Work RAM
-    bus.wram_0 = malloc(0x1000);
-    if (!bus.wram_0) {
-        perror("Failed to allocate memory for WRAM (bank: 0)\n");
-        goto cleanup_wram_0;
-    }
-    bus.wram_1 = malloc(0x1000);
-    if (!bus.wram_1) {
-        perror("Failed to allocate memory for WRAM (bank: 1)\n");
-        goto cleanup_wram_1;
+    // DMG - 8kb
+    // CGB - 32kb
+    wram = malloc(WRAM_BANK_SIZE * (cgb ? 8 : 2));
+    if (!wram) {
+        perror("Failed to allocate memory for WRAM\n");
+        goto cleanup_wram;
     }
 
-    bus.oam = oam;
     bus.page_0 = (u8*)&io;
+    bus.oam = oam;
+    bus.vram = vram;
+    bus.wram_0 = wram;
+    bus.wram_1 = wram + WRAM_BANK_SIZE;
     return;
 
-cleanup_wram_1:
-    free(bus.wram_1);
-    bus.wram_1 = NULL;
-cleanup_wram_0:
-    free(bus.wram_0);
+cleanup_wram:
+    free(wram);
+    wram = NULL;
     bus.wram_0 = NULL;
+    bus.wram_1 = NULL;
 cleanup_vram:
-    free(bus.vram);
+    free(vram);
+    vram = NULL;
     bus.vram = NULL;
 }
 
@@ -194,6 +198,12 @@ void mem_write(u16 addr, u8 value) {
             // Writing anything to DMA register starts a DMA transfer to OAM
             io.dma = value;
             dma_start(value);
+        } else if (addr == 0xFF4F) {
+            io.vram_bank = value & 0x01;
+            bus.vram = vram + (io.vram_bank * VRAM_BANK_SIZE);
+        } else if (addr == 0xFF70) {
+            io.wram_bank = value & 0x07;
+            bus.wram_1 = wram + ((!io.wram_bank + io.wram_bank) * WRAM_BANK_SIZE);
         } else {
             bus.page_0[addr - 0xFF00] = value;
         }

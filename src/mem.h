@@ -15,7 +15,11 @@ typedef struct {
 
 extern Bus bus;
 
-void mem_init();
+extern u8 oam[0xA0];
+extern u8* vram;
+extern u8* wram;
+
+void mem_init(bool);
 
 u8 mem_read(u16 addr);
 void mem_write(u16 addr, u8 value);

@@ -4,7 +4,9 @@
 #include <stdbool.h>
 
 #define ROM_BANK_SIZE 16384
-#define RAM_BANK_SIZE 8192
+#define SRAM_BANK_SIZE 8192
+#define VRAM_BANK_SIZE 8192
+#define WRAM_BANK_SIZE 4096
 
 #define ROM_ONLY 0
 #define MBC1 1

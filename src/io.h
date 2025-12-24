@@ -205,19 +205,22 @@ struct io {
     u16 : 16; // padding
 
     // TODO: cgb registers
-    // u8 vram_bank;
-    // u8 disable_boot; // 0xFF50
-    // u8 vram_dma[5]; // 0xFF51-FF55
+    u8 vram_bank;
+    u8 disable_boot; // 0xFF50
+    u8 vram_dma[5]; // 0xFF51-FF55
 
+    u8 : 8; // padding
     u32 : 32; // padding
     u32 : 32; // padding
     u32 : 32; // padding
     u32 : 32; // padding
     u32 : 32; // padding
-    u32 : 32; // padding
-    u32 : 32; // padding
-    u32 : 32; // padding
-    u32 : 32; // padding
+    u32 : 32; // padding;
+
+    u8 wram_bank;
+
+    u8 : 8; // padding
+    u16 : 16; // padding
     u32 : 32; // padding
     u32 : 32; // padding
     u32 : 32; // padding
