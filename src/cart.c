@@ -20,7 +20,7 @@ static const size_t ram_size_table[] = {
 };
 
 bool is_cgb() {
-    rom_header header = *(rom_header*)(cart.rom);
+    rom_header header = *(rom_header*)(cart.rom + 0x100);
     return (header.cgb_flag & 0x80) != 0;
 }
 
