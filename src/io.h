@@ -201,15 +201,16 @@ struct io {
     u8 win_y; // 0xFF4A
     u8 win_x; // 0xFF4B
 
-    u8 : 8; // padding
     u16 : 16; // padding
-
-    // TODO: cgb registers
-    u8 vram_bank;
-    u8 disable_boot; // 0xFF50
-    u8 vram_dma[5]; // 0xFF51-FF55
-
     u8 : 8; // padding
+
+    u8 vram_bank; // 0xFF4F
+    u8 disable_boot; // 0xFF50
+    u16 hdma_src; // 0xFF51
+    u16 hdma_dest; // 0xFF53
+    u8 hdma; // 0xFF55
+
+    u16 : 8; // padding
     u32 : 32; // padding
     u32 : 32; // padding
     u32 : 32; // padding
@@ -217,7 +218,7 @@ struct io {
     u32 : 32; // padding
     u32 : 32; // padding;
 
-    u8 wram_bank;
+    u8 wram_bank; // 0xFF70
 
     u8 : 8; // padding
     u16 : 16; // padding
