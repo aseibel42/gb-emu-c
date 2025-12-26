@@ -201,6 +201,12 @@ void mem_write(u16 addr, u8 value) {
         } else if (addr == 0xFF4F) {
             io.vram_bank = value & 0x01;
             bus.vram = vram + (io.vram_bank * VRAM_BANK_SIZE);
+        // } else if (addr == 0xFF55) {
+        //     io.hdma = value;
+        //     u8 length = value & 0x7F; // length: low 7 bits
+        //     // Currently, this assumes and implements generic hdma transfer (mode 0, bit 7), hsync transfer (mode 1) not yet implemented
+        //     printf("starting hdma");
+        //     // hdma_start(length);
         } else if (addr == 0xFF70) {
             io.wram_bank = value & 0x07;
             bus.wram_1 = wram + ((!io.wram_bank + io.wram_bank) * WRAM_BANK_SIZE);
@@ -249,5 +255,49 @@ void dma_tick() {
     if (dma_offset >= 0xA0) {
         dma_active = false;
         return;
+    }
+}
+
+void hdma_start(u8 length) {
+    u16 src_addr = io.hdma_src;
+    u16 dest_addr = io.hdma_dest;
+    u16 num_bytes_to_transfer = (length + 1) * 16;
+    u16 cutoff_addr = 0xFFFF;
+    u8* src_ptr = NULL;
+    u8* dest_ptr = bus.vram + dest_addr;
+
+    if (src_addr < 0x4000) { // ROM bank 0
+        cutoff_addr = 0x4000;
+        src_ptr = bus.rom_0 + src_addr;
+    } else if (src_addr < 0x8000) { // ROM switchable bank 1
+        cutoff_addr = 0x8000;
+        src_ptr = bus.rom_1 + src_addr;
+    } else if (src_addr < 0xA000) { // VRAM - Shouldn't happen
+        cutoff_addr = 0xA000;
+        src_ptr = bus.vram + src_addr;
+        printf("HDMA start_addr in VRAM, should not happen");
+    } else if (src_addr < 0xC000) { // SRAM
+        cutoff_addr = 0xC000;
+        src_ptr = bus.sram + src_addr;
+    } else if (src_addr < 0xD000) { // WRAM0
+        cutoff_addr = 0xD000;
+        src_ptr = bus.wram_0 + src_addr;
+    } else if (src_addr < 0xE000) { // WRAM1-7
+        cutoff_addr = 0xE000;
+        src_ptr = bus.wram_1 + src_addr;
+    }
+
+    // memory transfer from hdma_start to hdma_end, but don't overlap memory banks
+    u16 first_mem_transfer_max = cutoff_addr - src_addr;
+    if (num_bytes_to_transfer <= first_mem_transfer_max){
+        memcpy(dest_ptr, src_ptr, num_bytes_to_transfer);
+    }
+    else {
+        // Transfer from first memory bank
+        memcpy(dest_ptr, src_ptr, first_mem_transfer_max);
+
+        // Second transfer
+        u16 remaining_bytes_to_transfer = num_bytes_to_transfer - first_mem_transfer_max;
+        memcpy(dest_ptr + first_mem_transfer_max, src_ptr + first_mem_transfer_max, remaining_bytes_to_transfer);
     }
 }
