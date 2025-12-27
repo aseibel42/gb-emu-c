@@ -201,12 +201,12 @@ void mem_write(u16 addr, u8 value) {
         } else if (addr == 0xFF4F) {
             io.vram_bank = value & 0x01;
             bus.vram = vram + (io.vram_bank * VRAM_BANK_SIZE);
-        // } else if (addr == 0xFF55) {
-        //     io.hdma = value;
-        //     u8 length = value & 0x7F; // length: low 7 bits
-        //     // Currently, this assumes and implements generic hdma transfer (mode 0, bit 7), hsync transfer (mode 1) not yet implemented
-        //     printf("starting hdma");
-        //     // hdma_start(length);
+        } else if (addr == 0xFF55) {
+            io.hdma = value;
+            u8 length = value & 0x7F; // length: low 7 bits
+            // Currently, this assumes and implements generic hdma transfer (mode 0, bit 7), hsync transfer (mode 1) not yet implemented
+            printf("starting hdma");
+            hdma_start(length);
         } else if (addr == 0xFF70) {
             io.wram_bank = value & 0x07;
             bus.wram_1 = wram + ((!io.wram_bank + io.wram_bank) * WRAM_BANK_SIZE);
@@ -259,8 +259,14 @@ void dma_tick() {
 }
 
 void hdma_start(u8 length) {
-    u16 src_addr = io.hdma_src;
-    u16 dest_addr = io.hdma_dest;
+    u8 lo = io.hdma_src[0];
+    u8 hi = io.hdma_src[1];
+    u16 src_addr = u16_from_bytes((u16_bytes){ hi, lo });
+
+    lo = io.hdma_dest[0];
+    hi = io.hdma_dest[1];
+    u16 dest_addr = u16_from_bytes((u16_bytes){ hi, lo });
+
     u16 num_bytes_to_transfer = (length + 1) * 16;
     u16 cutoff_addr = 0xFFFF;
     u8* src_ptr = NULL;

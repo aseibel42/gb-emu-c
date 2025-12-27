@@ -206,11 +206,11 @@ struct io {
 
     u8 vram_bank; // 0xFF4F
     u8 disable_boot; // 0xFF50
-    u16 hdma_src; // 0xFF51
-    u16 hdma_dest; // 0xFF53
+    u8 hdma_src[2]; // 0xFF51
+    u8 hdma_dest[2]; // 0xFF53
     u8 hdma; // 0xFF55
 
-    u16 : 8; // padding
+    u16 : 16; // padding
     u32 : 32; // padding
     u32 : 32; // padding
     u32 : 32; // padding
