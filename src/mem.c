@@ -259,51 +259,70 @@ void dma_tick() {
 }
 
 void hdma_start(u8 length) {
-    u8 lo = io.hdma_src[0];
-    u8 hi = io.hdma_src[1];
+    u8 hi = io.hdma_src[0];
+    u8 lo = io.hdma_src[1];
     u16 src_addr = u16_from_bytes((u16_bytes){ hi, lo });
 
-    lo = io.hdma_dest[0];
-    hi = io.hdma_dest[1];
+    hi = io.hdma_dest[0];
+    lo = io.hdma_dest[1];
     u16 dest_addr = u16_from_bytes((u16_bytes){ hi, lo });
 
     u16 num_bytes_to_transfer = (length + 1) * 16;
     u16 cutoff_addr = 0xFFFF;
     u8* src_ptr = NULL;
+    u8* src_ptr_2 = NULL;
     u8* dest_ptr = bus.vram + dest_addr;
+    printf("src addr: %x", src_addr);
 
     if (src_addr < 0x4000) { // ROM bank 0
         cutoff_addr = 0x4000;
         src_ptr = bus.rom_0 + src_addr;
+        src_ptr_2 = bus.rom_1;
+        printf("source rom0\n");
     } else if (src_addr < 0x8000) { // ROM switchable bank 1
         cutoff_addr = 0x8000;
-        src_ptr = bus.rom_1 + src_addr;
+        src_ptr = bus.rom_1 + src_addr - 0x4000;
+        src_ptr_2 = bus.vram;
+        printf("source rom1\n");
     } else if (src_addr < 0xA000) { // VRAM - Shouldn't happen
         cutoff_addr = 0xA000;
-        src_ptr = bus.vram + src_addr;
+        src_ptr = bus.vram + src_addr - 0x8000;
+        src_ptr_2 = bus.sram;
         printf("HDMA start_addr in VRAM, should not happen");
     } else if (src_addr < 0xC000) { // SRAM
         cutoff_addr = 0xC000;
-        src_ptr = bus.sram + src_addr;
+        src_ptr = bus.sram + src_addr - 0xA000;
+        src_ptr_2 = bus.wram_0;
+        printf("source sram\n");
     } else if (src_addr < 0xD000) { // WRAM0
         cutoff_addr = 0xD000;
-        src_ptr = bus.wram_0 + src_addr;
+        src_ptr = bus.wram_0 + src_addr - 0xC000;
+        // printf("src addr: %x", src_addr);
+        src_ptr_2 = bus.wram_1;
+        printf("source wram0\n");
     } else if (src_addr < 0xE000) { // WRAM1-7
         cutoff_addr = 0xE000;
-        src_ptr = bus.wram_1 + src_addr;
+        src_ptr = bus.wram_1 + src_addr  - 0xD000;
+        src_ptr_2 = NULL;
+        printf("source wram1-7\n");
+    } else {
+        printf("outside range\n");
     }
 
     // memory transfer from hdma_start to hdma_end, but don't overlap memory banks
     u16 first_mem_transfer_max = cutoff_addr - src_addr;
     if (num_bytes_to_transfer <= first_mem_transfer_max){
+        printf("single transfer\n");
         memcpy(dest_ptr, src_ptr, num_bytes_to_transfer);
     }
     else {
         // Transfer from first memory bank
+        printf("1 of 2 transfers\n");
         memcpy(dest_ptr, src_ptr, first_mem_transfer_max);
 
         // Second transfer
         u16 remaining_bytes_to_transfer = num_bytes_to_transfer - first_mem_transfer_max;
-        memcpy(dest_ptr + first_mem_transfer_max, src_ptr + first_mem_transfer_max, remaining_bytes_to_transfer);
+        printf("2 of 2 transfers\n");
+        memcpy(dest_ptr + first_mem_transfer_max, src_ptr_2, remaining_bytes_to_transfer);
     }
 }
