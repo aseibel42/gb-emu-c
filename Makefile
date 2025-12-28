@@ -28,7 +28,7 @@ ifdef OS
     ifeq ($(OS), Windows_NT)
         # Windows settings
         LDFLAGS := -L./lib/sdl2/lib -L./lib/sdl2_ttf/lib
-        LDLIBS := -lmingw32 -lSDL2main -lSDL2 -lSDL2_ttf
+        LDLIBS := -static -lmingw32 -lSDL2main -lSDL2 -lSDL2_ttf -lsetupapi -lole32 -lgdi32 -limm32 -lversion -loleaut32 -lwinmm -lrpcrt4
         INCS := -I./lib/sdl2/include -I./lib/sdl2/include/sdl2 -I./lib/sdl2_ttf/include -I"C:/msys64/mingw64/include"
     endif
 else
@@ -60,6 +60,7 @@ all: $(OUTDIR)$(EXE)
 # Link
 $(OUTDIR)$(EXE): $(OBJS) | $(OUTDIR)
 	$(CC) $(LDFLAGS) $^ -o $@ $(LDLIBS)
+	strip $(OUTDIR)$(EXE)
 
 # Compile
 $(OBJDIR)%$(OBJEXT): $(SRCDIR)%$(SRCEXT) | $(OBJDIR)
