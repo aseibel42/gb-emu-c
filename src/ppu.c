@@ -23,7 +23,9 @@ static sprite_info line_sprites[10];
 static u8 win_y = 0;
 static bool win_test_y = false;
 
-static u32 dmg_palette[4] = {0xFFFFFFFF, 0xFFAAAAAA, 0xFF555555, 0xFF000000};
+// static u32 dmg_palette[4] = {0xFFFFFFFF, 0xFFAAAAAA, 0xFF555555, 0xFF000000};
+static u16 dmg_palette[4] = {0xFFFF, 0xDAD6, 0xA94A, 0x8000};
+static u8* cgb_palette = {0};
 
 static inline void blend(u8* dest, u8 value, u8 mask) {
     *dest &= ~mask;
@@ -255,7 +257,7 @@ void ppu_draw_line() {
     }
 
     // Get pixel color from info
-    u32 pixel_colors[160];
+    u16 pixel_colors[160];
     for (int t = 0; t<TILES_PER_LINE; t++) {
         u8 color_lsb = color_0[t];
         u8 color_msb = color_1[t];
@@ -281,8 +283,8 @@ void ppu_draw_line() {
     }
 
     // Copy pixels to surface
-    u32* scanline_ptr = ui_scanline_start(io.lcd_y);
-    memcpy(scanline_ptr, pixel_colors, 4*160);
+    u16* scanline_ptr = ui_scanline_start(io.lcd_y);
+    memcpy(scanline_ptr, pixel_colors, 2*160);
 }
 
 void ppu_end_line() {

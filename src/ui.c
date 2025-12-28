@@ -54,7 +54,8 @@ extern NoiseChannel ch4;
 static u32 elapsed = 0;
 static const float min_frame_duration_ms = 1000.0f / MAX_FPS;
 
-static u32 debug_palette[4] = {0xFFFFFFFF, 0xFFAAAAAA, 0xFF555555, 0xFF000000};
+// static u32 debug_palette[4] = {0xFFFFFFFF, 0xFFAAAAAA, 0xFF555555, 0xFF000000};
+static u16 debug_palette[4] = {0xFFFF, 0xDAD6, 0xA94A, 0x8000};
 
 int ui_scale = 2;
 
@@ -80,7 +81,7 @@ void ui_init() {
     // A texture is located in VRAM and uses hardware rendering
     sdlTexture = SDL_CreateTexture(
         sdlRenderer,
-        SDL_PIXELFORMAT_ARGB8888,
+        SDL_PIXELFORMAT_RGB555,
         SDL_TEXTUREACCESS_STREAMING,
         X_RESOLUTION,
         Y_RESOLUTION
@@ -279,7 +280,7 @@ void ui_request_frame() {
     limit_fps();
 }
 
-u32* ui_scanline_start(u8 y) {
+u16* ui_scanline_start(u8 y) {
     return sdlSurface->pixels + y * sdlSurface->pitch;
 }
 

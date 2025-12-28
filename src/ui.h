@@ -21,7 +21,7 @@ void ui_request_frame();
 void ui_update_debug_window();
 void ui_update_tilemap_window(SDL_Surface *_surface, SDL_Renderer *_renderer, SDL_Texture *_texture, u16 tilemap_start_addr);
 void ui_update_audio_window();
-u32* ui_scanline_start(u8 y);
+u16* ui_scanline_start(u8 y);
 
 int load_rom_list(const char *folder, char filenames[][MAX_FILENAME], int max_files);
 void emu_run();
