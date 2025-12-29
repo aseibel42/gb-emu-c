@@ -108,6 +108,7 @@ void ppu_draw_line_cgb() {
     u8 source_1[TILES_PER_LINE] = {0};
     u8 source_2[TILES_PER_LINE] = {0};
     u8 source_3[TILES_PER_LINE] = {0};
+    u8 priority[TILES_PER_LINE] = {0};
 
     // tile addressing
     u16 tile_data_addr = io.lcdc.bgw_tiles ? 0x0000 : 0x0800;
@@ -144,6 +145,7 @@ void ppu_draw_line_cgb() {
                 reverse_bits(&color_msb);
             }
 
+            u8 priorities = tile_attr.priority ? 0xFF : 0x00;
             u8 source_b0 = (tile_attr.cgb_palette & 0x01) > 0 ? 0xFF : 0x00;
             u8 source_b1 = (tile_attr.cgb_palette & 0x02) > 0 ? 0xFF : 0x00;
             u8 source_b2 = (tile_attr.cgb_palette & 0x04) > 0 ? 0xFF : 0x00;
@@ -151,6 +153,7 @@ void ppu_draw_line_cgb() {
             if (t > 0) {
                 blend(&color_0[t-1], color_lsb >> (8 - bg_offset_x), mask_bytes.hi);
                 blend(&color_1[t-1], color_msb >> (8 - bg_offset_x), mask_bytes.hi);
+                blend(&priority[t-1], priorities >> (8 - bg_offset_x), mask_bytes.hi);
                 blend(&source_0[t-1], source_b0 >> (8 - bg_offset_x), mask_bytes.hi);
                 blend(&source_1[t-1], source_b1 >> (8 - bg_offset_x), mask_bytes.hi);
                 blend(&source_2[t-1], source_b2 >> (8 - bg_offset_x), mask_bytes.hi);
@@ -159,6 +162,7 @@ void ppu_draw_line_cgb() {
             if (t < TILES_PER_LINE) {
                 blend(&color_0[t], color_lsb << bg_offset_x, mask_bytes.lo);
                 blend(&color_1[t], color_msb << bg_offset_x, mask_bytes.lo);
+                blend(&priority[t], priorities << bg_offset_x, mask_bytes.lo);
                 blend(&source_0[t], source_b0 << bg_offset_x, mask_bytes.lo);
                 blend(&source_1[t], source_b1 << bg_offset_x, mask_bytes.lo);
                 blend(&source_2[t], source_b2 << bg_offset_x, mask_bytes.lo);
@@ -187,6 +191,7 @@ void ppu_draw_line_cgb() {
             color_0[t] = color_lsb;
             color_1[t] = color_msb;
 
+            priority[t] = tile_attr.priority ? 0xFF : 0x00;
             source_0[t] = (tile_attr.cgb_palette & 0x01) > 0 ? 0xFF : 0x00;
             source_1[t] = (tile_attr.cgb_palette & 0x02) > 0 ? 0xFF : 0x00;
             source_2[t] = (tile_attr.cgb_palette & 0x04) > 0 ? 0xFF : 0x00;
@@ -224,6 +229,7 @@ void ppu_draw_line_cgb() {
                     reverse_bits(&color_msb);
                 }
 
+                u8 priorities = tile_attr.priority ? 0xFF : 0x00;
                 u8 source_b0 = (tile_attr.cgb_palette & 0x01) > 0 ? 0xFF : 0x00;
                 u8 source_b1 = (tile_attr.cgb_palette & 0x02) > 0 ? 0xFF : 0x00;
                 u8 source_b2 = (tile_attr.cgb_palette & 0x04) > 0 ? 0xFF : 0x00;
@@ -231,6 +237,7 @@ void ppu_draw_line_cgb() {
                 if (win_start_x + t > 0) {
                     blend(&color_0[win_start_x + t-1], color_lsb >> win_offset_x, mask_bytes.hi);
                     blend(&color_1[win_start_x + t-1], color_msb >> win_offset_x, mask_bytes.hi);
+                    blend(&priority[win_start_x + t-1], priorities >> win_offset_x, mask_bytes.hi);
                     blend(&source_0[win_start_x + t-1], source_b0 >> win_offset_x, mask_bytes.hi);
                     blend(&source_1[win_start_x + t-1], source_b1 >> win_offset_x, mask_bytes.hi);
                     blend(&source_2[win_start_x + t-1], source_b2 >> win_offset_x, mask_bytes.hi);
@@ -239,6 +246,7 @@ void ppu_draw_line_cgb() {
                 if (win_start_x + t < TILES_PER_LINE) {
                     blend(&color_0[win_start_x + t], color_lsb << (8 - win_offset_x), mask_bytes.lo);
                     blend(&color_1[win_start_x + t], color_msb << (8 - win_offset_x), mask_bytes.lo);
+                    blend(&priority[win_start_x + t], priorities << (8 - win_offset_x), mask_bytes.lo);
                     blend(&source_0[win_start_x + t], source_b0 << (8 - win_offset_x), mask_bytes.lo);
                     blend(&source_1[win_start_x + t], source_b1 << (8 - win_offset_x), mask_bytes.lo);
                     blend(&source_2[win_start_x + t], source_b2 << (8 - win_offset_x), mask_bytes.lo);
@@ -266,6 +274,7 @@ void ppu_draw_line_cgb() {
                 color_0[win_start_x + t] = color_lsb;
                 color_1[win_start_x + t] = color_msb;
 
+                priority[win_start_x + t] = tile_attr.priority ? 0xFF : 0x00;
                 source_0[win_start_x + t] = (tile_attr.cgb_palette & 0x01) > 0 ? 0xFF : 0x00;
                 source_1[win_start_x + t] = (tile_attr.cgb_palette & 0x02) > 0 ? 0xFF : 0x00;
                 source_2[win_start_x + t] = (tile_attr.cgb_palette & 0x04) > 0 ? 0xFF : 0x00;
@@ -308,14 +317,14 @@ void ppu_draw_line_cgb() {
             u8 source_b2 = (sprite.cgb_palette & 0x04) > 0 ? 0xFF : 0x00;
             u8 source_b3 = 0xFF;
 
-
-            // transparency and background priority
-            u8 mask = sprite.priority
-                ? ~(color_0[obj_tile_x] | color_1[obj_tile_x])
-                : color_lsb | color_msb;
-
+            u8 mask = color_lsb | color_msb;
             if (obj_offset_x) {
                 u16_bytes mask_bytes = u16_to_bytes(mask << (8 - obj_offset_x));
+                u16_bytes obj_priority_bytes = sprite.priority ? mask_bytes : (u16_bytes){0};
+                if (io.lcdc.bgw_enable) {
+                    mask_bytes.hi &= ~((obj_priority_bytes.hi | priority[obj_tile_x-1]) & (color_0[obj_tile_x-1] | color_1[obj_tile_x-1]));
+                    mask_bytes.lo &= ~((obj_priority_bytes.lo | priority[obj_tile_x]) & (color_0[obj_tile_x] | color_1[obj_tile_x]));
+                }
 
                 if (obj_tile_x > 0) {
                     blend(&color_0[obj_tile_x-1], color_lsb >> obj_offset_x, mask_bytes.hi);
@@ -335,6 +344,11 @@ void ppu_draw_line_cgb() {
                     blend(&source_3[obj_tile_x], source_b3 << (8 - obj_offset_x), mask_bytes.lo);
                 }
             } else {
+                if (io.lcdc.bgw_enable) {
+                    u8 obj_priority = sprite.priority ? 0xFF : 0x00;
+                    mask &= ~((obj_priority | priority[obj_tile_x]) & (color_0[obj_tile_x] | color_1[obj_tile_x]));
+                }
+
                 blend(&color_0[obj_tile_x], color_lsb, mask);
                 blend(&color_1[obj_tile_x], color_msb, mask);
                 blend(&source_0[obj_tile_x], source_b0, mask);
