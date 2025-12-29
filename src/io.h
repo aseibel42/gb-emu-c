@@ -215,8 +215,15 @@ struct io {
     u32 : 32; // padding
     u32 : 32; // padding
     u32 : 32; // padding
-    u32 : 32; // padding
-    u32 : 32; // padding;
+
+    u8 bgpi; // 0xFF68
+    u8 bgpd; // 0xFF69
+    u8 obpi; // 0xFF6A
+    u8 obpd; // 0xFF6B
+
+    u8 priority_mode; // 0xFF6C
+    u8 : 8; // padding;
+    u16 : 16; // padding;
 
     u8 wram_bank; // 0xFF70
 

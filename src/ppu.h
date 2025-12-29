@@ -24,5 +24,19 @@ typedef struct {
     u8 priority : 1;
 } obj_attr;
 
-void ppu_init();
+typedef union {
+    u8 raw;
+    struct {
+        u8 cgb_palette : 3;
+        u8 cgb_bank : 1;
+        u8 : 1; // padding
+        u8 x_flip : 1;
+        u8 y_flip : 1;
+        u8 priority : 1;
+    };
+} bgw_attr;
+
+void ppu_init(bool);
 void ppu_tick();
+
+extern u8* cgb_palette;

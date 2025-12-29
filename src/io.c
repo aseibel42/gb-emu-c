@@ -66,4 +66,6 @@ void io_init() {
     io.vram_bank = 0x00;
     io.disable_boot = 0x00;
     io.hdma = 0xFF;
+    io.bgpi = 0xFF;
+    io.obpi = 0xFF;
 }

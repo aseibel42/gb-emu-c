@@ -5,6 +5,7 @@
 #include "io.h"
 #include "apu.h"
 #include "mem.h"
+#include "ppu.h"
 
 Bus bus = {0};
 
@@ -96,6 +97,12 @@ u8 mem_read(u16 addr) {
             } else if (!io.joyp.select_dpad) {
                 value &= btns.dpad;
             }
+        } else if (addr == 0xFF69) {
+            u8 palette_addr = io.bgpi & 0x3F;
+            value = cgb_palette[palette_addr];
+        } else if (addr == 0xFF6B) {
+            u8 palette_addr = io.obpi & 0x3F;
+            value = cgb_palette[palette_addr + 64];
         } else {
             value = bus.page_0[addr - 0xFF00];
         }
@@ -205,8 +212,18 @@ void mem_write(u16 addr, u8 value) {
             io.hdma = value;
             u8 length = value & 0x7F; // length: low 7 bits
             // Currently, this assumes and implements generic hdma transfer (mode 0, bit 7), hsync transfer (mode 1) not yet implemented
-            printf("starting hdma");
+            // printf("starting hdma");
             hdma_start(length);
+        } else if (addr == 0xFF69) {
+            u8 palette_addr = io.bgpi & 0x3F;
+            cgb_palette[palette_addr] = value;
+            io.bgpi += (io.bgpi >> 7) & 1;
+            io.bgpi &= 0xBF;
+        } else if (addr == 0xFF6B) {
+            u8 palette_addr = io.obpi & 0x3F;
+            cgb_palette[palette_addr + 64] = value;
+            io.obpi += (io.obpi >> 7) & 1;
+            io.obpi &= 0xBF;
         } else if (addr == 0xFF70) {
             io.wram_bank = value & 0x07;
             bus.wram_1 = wram + ((!io.wram_bank + io.wram_bank) * WRAM_BANK_SIZE);

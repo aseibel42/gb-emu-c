@@ -81,7 +81,7 @@ void ui_init() {
     // A texture is located in VRAM and uses hardware rendering
     sdlTexture = SDL_CreateTexture(
         sdlRenderer,
-        SDL_PIXELFORMAT_RGB555,
+        SDL_PIXELFORMAT_BGR555,
         SDL_TEXTUREACCESS_STREAMING,
         X_RESOLUTION,
         Y_RESOLUTION
