@@ -65,7 +65,7 @@ void io_init() {
     // -- CGB Registers --
     io.vram_bank = 0x00;
     io.disable_boot = 0x00;
-    io.hdma = 0xFF;
+    io.vdmac.value = 0xFF;
     io.bgpi = 0xFF;
     io.obpi = 0xFF;
 }
