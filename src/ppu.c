@@ -529,12 +529,12 @@ void ppu_draw_line() {
             }
 
             // transparency and background priority
-            u8 mask = sprite.priority
-                ? ~(color_0[obj_tile_x] | color_1[obj_tile_x])
-                : color_lsb | color_msb;
-
+            u8 mask = color_lsb | color_msb;
             if (obj_offset_x) {
                 u16_bytes mask_bytes = u16_to_bytes(mask << (8 - obj_offset_x));
+                u16_bytes obj_priority_bytes = sprite.priority ? mask_bytes : (u16_bytes){0};
+                mask_bytes.hi &= ~((obj_priority_bytes.hi) & (color_0[obj_tile_x-1] | color_1[obj_tile_x-1]));
+                mask_bytes.lo &= ~((obj_priority_bytes.lo) & (color_0[obj_tile_x] | color_1[obj_tile_x]));
 
                 if (obj_tile_x > 0) {
                     blend(&color_0[obj_tile_x-1], color_lsb >> obj_offset_x, mask_bytes.hi);
@@ -550,6 +550,8 @@ void ppu_draw_line() {
                     blend(&source_1[obj_tile_x], source_msb << (8 - obj_offset_x), mask_bytes.lo);
                 }
             } else {
+                u8 obj_priority = sprite.priority ? 0xFF : 0x00;
+                mask &= ~(obj_priority & (color_0[obj_tile_x] | color_1[obj_tile_x]));
                 blend(&color_0[obj_tile_x], color_lsb, mask);
                 blend(&color_1[obj_tile_x], color_msb, mask);
                 blend(&source_0[obj_tile_x], source_lsb, mask);
