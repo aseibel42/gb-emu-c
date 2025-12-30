@@ -140,6 +140,14 @@ typedef union {
     u8 value;
 } audio_ctrl;
 
+typedef union {
+    struct {
+        u8 length : 7;
+        u8 mode : 1;
+    };
+    u8 value;
+} vram_dma_ctrl;
+
 // Contains hardware registers and High RAM (hram)
 // Padding added to match layout of 256-byte zero page (bus.page_0)
 struct io {
@@ -208,7 +216,7 @@ struct io {
     u8 disable_boot; // 0xFF50
     u8 hdma_src[2]; // 0xFF51
     u8 hdma_dest[2]; // 0xFF53
-    u8 hdma; // 0xFF55
+    vram_dma_ctrl vdmac; // 0xFF55
 
     u16 : 16; // padding
     u32 : 32; // padding

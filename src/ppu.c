@@ -623,6 +623,7 @@ void ppu_mode_oam() {
 void ppu_mode_xfer() {
     if (ppu_dots >= 80 + 172) { // TODO: add extra dots from "penalties"
         io.stat.ppu_mode = PPU_MODE_HBLANK;
+        hdma_tick();
     }
 }
 

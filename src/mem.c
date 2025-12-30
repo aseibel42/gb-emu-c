@@ -9,11 +9,14 @@
 
 Bus bus = {0};
 
-bool dma_active = false;
-
+static bool dma_active = false;
 static u8 dma_delay = 0;
 static u8 dma_offset = 0;
 static u16 dma_source_addr = 0;
+
+static bool hdma_active = false;
+static u8* hdma_dest_ptr = NULL;
+static u8* hdma_src_ptr = NULL;
 
 u8 oam[0xA0] = {0};
 u8* vram = {0};
@@ -209,11 +212,15 @@ void mem_write(u16 addr, u8 value) {
             io.vram_bank = value & 0x01;
             bus.vram = vram + (io.vram_bank * VRAM_BANK_SIZE);
         } else if (addr == 0xFF55) {
-            io.hdma = value;
-            u8 length = value & 0x7F; // length: low 7 bits
-            // Currently, this assumes and implements generic hdma transfer (mode 0, bit 7), hsync transfer (mode 1) not yet implemented
-            // printf("starting hdma");
-            hdma_start(length);
+            io.vdmac.value = value;
+            if (hdma_active){
+                // Turn off hdma if already active
+                hdma_active = false;
+                printf("stopping prev dma transfer\n");
+            } else {
+                // Start hdma if not already active
+                vram_dma_start(io.vdmac.length);
+            }
         } else if (addr == 0xFF69) {
             u8 palette_addr = io.bgpi & 0x3F;
             cgb_palette[palette_addr] = value;
@@ -275,71 +282,99 @@ void dma_tick() {
     }
 }
 
-void hdma_start(u8 length) {
+void hdma_tick() {
+    if (!hdma_active) {
+        return;
+    }
+
+    // Copy 16 bytes from src to destination and update offset
+    memcpy(hdma_dest_ptr, hdma_src_ptr, 16);
+    hdma_dest_ptr += 16;
+    hdma_src_ptr += 16;
+
+    if (io.vdmac.length == 0) {
+        hdma_active = false;
+        printf("hdma done\n");
+    }
+
+    io.vdmac.length -= 1;
+}
+
+void vram_dma_start(u8 length) {
     u8 hi = io.hdma_src[0];
     u8 lo = io.hdma_src[1];
-    u16 src_addr = u16_from_bytes((u16_bytes){ hi, lo });
+    u16 src_addr = u16_from_bytes((u16_bytes){ hi, lo }) & 0xFFF0;
 
     hi = io.hdma_dest[0];
     lo = io.hdma_dest[1];
-    u16 dest_addr = u16_from_bytes((u16_bytes){ hi, lo });
+    u16 dest_addr = u16_from_bytes((u16_bytes){ hi, lo }) & 0x1FF0;
 
-    u16 num_bytes_to_transfer = (length + 1) * 16;
+    u16 num_bytes_to_transfer = ((u16)length + 1) * 16;
     u16 cutoff_addr = 0xFFFF;
     u8* src_ptr = NULL;
     u8* src_ptr_2 = NULL;
     u8* dest_ptr = bus.vram + dest_addr;
-    printf("src addr: %x", src_addr);
+    printf("dest addr: 0x%x ", dest_addr);
+    printf("src addr: 0x%x ", src_addr);
 
     if (src_addr < 0x4000) { // ROM bank 0
         cutoff_addr = 0x4000;
         src_ptr = bus.rom_0 + src_addr;
         src_ptr_2 = bus.rom_1;
-        printf("source rom0\n");
+        printf("src region: rom0\n");
     } else if (src_addr < 0x8000) { // ROM switchable bank 1
         cutoff_addr = 0x8000;
         src_ptr = bus.rom_1 + src_addr - 0x4000;
         src_ptr_2 = bus.vram;
-        printf("source rom1\n");
+        printf("src region: rom1\n");
     } else if (src_addr < 0xA000) { // VRAM - Shouldn't happen
         cutoff_addr = 0xA000;
         src_ptr = bus.vram + src_addr - 0x8000;
         src_ptr_2 = bus.sram;
-        printf("HDMA start_addr in VRAM, should not happen");
+        printf("DMA start_addr in VRAM, should not happen");
     } else if (src_addr < 0xC000) { // SRAM
         cutoff_addr = 0xC000;
         src_ptr = bus.sram + src_addr - 0xA000;
         src_ptr_2 = bus.wram_0;
-        printf("source sram\n");
+        printf("src region: sram\n");
     } else if (src_addr < 0xD000) { // WRAM0
         cutoff_addr = 0xD000;
         src_ptr = bus.wram_0 + src_addr - 0xC000;
         // printf("src addr: %x", src_addr);
         src_ptr_2 = bus.wram_1;
-        printf("source wram0\n");
+        printf("src region: wram0\n");
     } else if (src_addr < 0xE000) { // WRAM1-7
         cutoff_addr = 0xE000;
         src_ptr = bus.wram_1 + src_addr  - 0xD000;
         src_ptr_2 = NULL;
-        printf("source wram1-7\n");
+        printf("src region: wram1-7\n");
     } else {
         printf("outside range\n");
     }
 
-    // memory transfer from hdma_start to hdma_end, but don't overlap memory banks
-    u16 first_mem_transfer_max = cutoff_addr - src_addr;
-    if (num_bytes_to_transfer <= first_mem_transfer_max){
-        printf("single transfer\n");
-        memcpy(dest_ptr, src_ptr, num_bytes_to_transfer);
-    }
-    else {
-        // Transfer from first memory bank
-        printf("1 of 2 transfers\n");
-        memcpy(dest_ptr, src_ptr, first_mem_transfer_max);
+    if (!io.vdmac.mode){
+        // Perform immediate gpdma transfer
+        printf("performing gpdma transfer\n");
+        u16 first_mem_transfer_max = cutoff_addr - src_addr;
+        if (num_bytes_to_transfer <= first_mem_transfer_max){
+            printf("single transfer 0x%x bytes \n", num_bytes_to_transfer);
+            memcpy(dest_ptr, src_ptr, num_bytes_to_transfer);
+        }
+        else {
+            // Transfer from first memory bank
+            printf("1 of 2 transfers\n");
+            memcpy(dest_ptr, src_ptr, first_mem_transfer_max);
 
-        // Second transfer
-        u16 remaining_bytes_to_transfer = num_bytes_to_transfer - first_mem_transfer_max;
-        printf("2 of 2 transfers\n");
-        memcpy(dest_ptr + first_mem_transfer_max, src_ptr_2, remaining_bytes_to_transfer);
+            // Second transfer
+            u16 remaining_bytes_to_transfer = num_bytes_to_transfer - first_mem_transfer_max;
+            printf("2 of 2 transfers\n");
+            memcpy(dest_ptr + first_mem_transfer_max, src_ptr_2, remaining_bytes_to_transfer);
+        }
+    } else {
+        // Start hdma transfer - will be executed by hdma_tick()
+        printf("Starting hdma transfer\n");
+        hdma_dest_ptr = dest_ptr;
+        hdma_src_ptr = src_ptr;
+        hdma_active = true;
     }
 }
