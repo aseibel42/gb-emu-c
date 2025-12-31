@@ -153,6 +153,9 @@ void cart_load(char *filename) {
         goto close;
     }
 
+    // Print cart type
+    printf("Cartridge type: %x\n", header.cart_type);
+
     // allocate memory for ROM
     cart.num_rom_banks = 2 << header.rom_size;
     cart.rom = malloc(cart.num_rom_banks * ROM_BANK_SIZE);

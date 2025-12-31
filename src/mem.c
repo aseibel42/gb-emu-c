@@ -209,8 +209,8 @@ void mem_write(u16 addr, u8 value) {
             io.dma = value;
             dma_start(value);
         } else if (addr == 0xFF4F) {
-            io.vram_bank = value & 0x01;
-            bus.vram = vram + (io.vram_bank * VRAM_BANK_SIZE);
+            io.vram_bank = value;
+            bus.vram = vram + ((io.vram_bank & 0x01) * VRAM_BANK_SIZE);
         } else if (addr == 0xFF55) {
             io.vdmac.value = value;
             if (hdma_active){

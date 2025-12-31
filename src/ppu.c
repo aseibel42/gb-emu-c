@@ -657,20 +657,22 @@ void ppu_mode_vblank() {
 }
 
 void ppu_tick() {
-    ppu_dots++;
+    if (io.lcdc.lcd_enable) {
+        ppu_dots++;
 
-    switch (io.stat.ppu_mode) {
-        case PPU_MODE_OAM:
-            ppu_mode_oam();
-            break;
-        case PPU_MODE_XFER:
-            ppu_mode_xfer();
-            break;
-        case PPU_MODE_VBLANK:
-            ppu_mode_vblank();
-            break;
-        case PPU_MODE_HBLANK:
-            ppu_mode_hblank();
-            break;
+        switch (io.stat.ppu_mode) {
+            case PPU_MODE_OAM:
+                ppu_mode_oam();
+                break;
+            case PPU_MODE_XFER:
+                ppu_mode_xfer();
+                break;
+            case PPU_MODE_VBLANK:
+                ppu_mode_vblank();
+                break;
+            case PPU_MODE_HBLANK:
+                ppu_mode_hblank();
+                break;
+        }
     }
 }
