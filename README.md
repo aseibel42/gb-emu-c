@@ -21,7 +21,7 @@ A Game Boy emulator written in C.
 2. Download any Game Boy ROMs into the rom/ folder (can find ROMs at https://vimm.net/vault/GB or https://vimm.net/vault/GBC)
 3. Install SDL2 and SDL2_ttf libraries onto your computer
    - For Ubuntu systems: `sudo apt install libsdl2-dev libsdl2-ttf-dev`
-4. Navigate to project directory and run 'make run'
+4. Navigate to project directory and run `make run`
 
 ## How to play
 
