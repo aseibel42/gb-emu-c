@@ -706,12 +706,12 @@ u16 ch3_find_trigger_point(float buffer[]) {
     float wave_bit_one_output_vol = ((float)wave_bit_vol / 7.5f) - 1.0f;
     wave_bit_one_output_vol = (wave_bit_one_output_vol + 1) * (io.master_vol.vol_left + 1)/8 - 1;
 
-    // find trigger point
-    if (wave_bit_one_output_vol > wave_bit_zero_output_vol) {
+    // find trigger point (won't be able to find it if bit_one and bit_zero are the same value)
+    if (wave_bit_one_output_vol != wave_bit_zero_output_vol) {
         int start = TARGET_FRAMES / 2;  // Middle of prev buffer
         int end = TARGET_FRAMES + (TARGET_FRAMES / 2);  // Middle of new buffer
         for (int i = end; i > start; i--) {
-            if (buffer[i * 2] == wave_bit_one_output_vol && buffer[(i - 1) * 2] == wave_bit_zero_output_vol) { // Zero-crossing (left channel)
+            if (buffer[i * 2] == wave_bit_one_output_vol && buffer[(i - 2) * 2] == wave_bit_zero_output_vol) { // Note: (i - 2) bc transition sample usually between values
                 return i - 1;
             }
         }
@@ -722,23 +722,37 @@ u16 ch3_find_trigger_point(float buffer[]) {
 
 // Function to find trigger in ch3 (find min, then first trigger from right)
 u16 ch3_find_trigger_min(float buffer[]) {
-    float trigger_threshold = 1.0f; // Initialize to the largest possible float value
+    float min_trigger_threshold = 1.0f; // Initialize to the largest possible float value
+    float largest_diff = -1.0f;
     int start = TARGET_FRAMES / 2;  // Middle of prev buffer
     int end = TARGET_FRAMES + (TARGET_FRAMES / 2);  // Middle of new buffer
+    int trigger_index = end;
     // find trigger_threshold
     for (int i = end; i > start; i--) {
-        if (buffer[i] < trigger_threshold) {
-            trigger_threshold = buffer[i];
-        }
-    }
-    // find trigger point
-    for (int i = end; i > start; i--) {
-        if (buffer[i * 2] > trigger_threshold && buffer[(i - 1) * 2] <= trigger_threshold) { // Zero-crossing (left channel)
-            return i;
+        // from right to left, save new trigger point at first instance of lowest amplitude
+        if (buffer[i * 2] < min_trigger_threshold) {
+            min_trigger_threshold = buffer[i * 2];
+            trigger_index = i;
+        } else if (buffer[i * 2] == min_trigger_threshold) {
+            // if same lowest amplitude, save new trigger index only if spike is larger
+            float diff = buffer[(i + 1) * 2] - buffer[i * 2];
+            if (diff > largest_diff) {
+                largest_diff = diff;
+                trigger_index = i;
+            }
         }
     }
 
-    return end; // Default: no trigger found, use end of middle section
+    return trigger_index;
+
+    // // find trigger point
+    // for (int i = end; i > start; i--) {
+    //     if (buffer[i * 2] > min_trigger_threshold && buffer[(i - 1) * 2] <= min_trigger_threshold) { // Zero-crossing (left channel)
+    //         return i;
+    //     }
+    // }
+
+    // return end; // Default: no trigger found, use end of middle section
 }
 
 // Function to mix audio buffers (average them)
