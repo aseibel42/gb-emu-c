@@ -1,5 +1,5 @@
 #include "util.h"
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 
 #define MAX_FPS 60.0f
 #define Y_RESOLUTION 144

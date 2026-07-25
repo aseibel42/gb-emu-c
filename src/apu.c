@@ -1,5 +1,6 @@
+#include <stdlib.h>
 #include <string.h>
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 #include <stdio.h>
 
 #include "apu.h"
@@ -23,8 +24,8 @@ u16 source_buffer_count = 0;
 float* combined_target_buffer = NULL;
 
 // Audio device
-SDL_AudioSpec desired, obtained;
-SDL_AudioDeviceID dev;
+SDL_AudioSpec desired;
+SDL_AudioStream *audio_stream;
 
 const u8 ch3_vol_shift_map[4] = {
     4, // 0% vol
@@ -42,22 +43,20 @@ const u8 wave_duty_table[4] = {
 
 void apu_init() {
     // Initialize SDL for audio, return error if it fails
-    if (SDL_Init(SDL_INIT_AUDIO) < 0) {
+    if (!SDL_Init(SDL_INIT_AUDIO)) {
         printf("SDL_Init failed: %s\n", SDL_GetError());
     }
 
     // Save audio device settings
-    SDL_memset(&desired, 0, sizeof(desired));
+    SDL_zero(desired);
     desired.freq = TARGET_SAMPLE_RATE; // Modern audio devices run at 48,000 Hz
-    desired.format = AUDIO_F32SYS; // 32 bit floats with system endianness
+    desired.format = SDL_AUDIO_F32; // 32 bit floats with system endianness
     desired.channels = 2; // 2-channel stereo (L, R, L, R ...)
-    desired.samples = TARGET_FRAMES; // Audio samples per frame at 48,000 Hz and 60 FPS
-    desired.callback = NULL;  // No callback, manual audio handling
 
-    // Open audio device with desired settings, return error if it fails
-    dev = SDL_OpenAudioDevice(NULL, 0, &desired, &obtained, 0);
-    if (dev == 0) {
-        printf("SDL_OpenAudioDevice failed: %s\n", SDL_GetError());
+    // Open an audio stream bound to the default playback device, return error if it fails
+    audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &desired, NULL, NULL);
+    if (!audio_stream) {
+        printf("SDL_OpenAudioDeviceStream failed: %s\n", SDL_GetError());
         SDL_Quit();
     }
 
@@ -72,7 +71,7 @@ void apu_init() {
     memset(combined_target_buffer, 0, TARGET_FRAMES * 2 * sizeof(float));
 
     // Unpause audio device
-    SDL_PauseAudioDevice(dev, 0);
+    SDL_ResumeAudioStreamDevice(audio_stream);
 }
 
 // Function to initialize a SquareChannel struct
@@ -673,12 +672,12 @@ void queue_audio() {
     mix_buffers(ch1.target_sample_buffer->curr, ch2.target_sample_buffer->curr, ch3.target_sample_buffer->curr, ch4.target_sample_buffer->curr, combined_target_buffer);
 
     // Add samples from buffer to audio queue (but not if queue is too large)
-    while (SDL_GetQueuedAudioSize(dev) > 4 * TARGET_FRAMES * 2 * sizeof(float)) {
+    while (SDL_GetAudioStreamQueued(audio_stream) > (int)(4 * TARGET_FRAMES * 2 * sizeof(float))) {
         SDL_Delay(1);
         // printf("Delay 1 ms---------------------------------\n");
     }
 
-    SDL_QueueAudio(dev, combined_target_buffer, TARGET_FRAMES * 2 * sizeof(float));
+    SDL_PutAudioStreamData(audio_stream, combined_target_buffer, TARGET_FRAMES * 2 * sizeof(float));
 }
 
 // Function to find trigger in middle half of combined buffer
