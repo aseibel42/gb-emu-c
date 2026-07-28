@@ -83,6 +83,9 @@ void ui_init() {
         Y_RESOLUTION
     );
 
+    // SDL3 defaults new textures to linear filtering; use nearest to keep the crisp pixelated look SDL2 had by default
+    SDL_SetTextureScaleMode(sdlTexture, SDL_SCALEMODE_NEAREST);
+
     // // Debug window
     // SDL_CreateWindowAndRenderer(
     //     16 * 8 * ui_scale,
