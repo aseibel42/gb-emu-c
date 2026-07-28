@@ -144,6 +144,11 @@ void mem_write(u16 addr, u8 value) {
         } else if (addr == 0xFF04) {
             // Writing anything to DIV register resets it to 0
             io.div = 0;
+        } else if (addr == 0xFF41) {
+            // Only the interrupt source bits are writable (bits 3-6).
+            // The ppu mode (bits 0-1) and the LY==LYC flag (bit 2) are read-only.
+            // Bit 7 is unused and always reads back as 1.
+            io.stat.value = 0x80 | (value & 0x78) | (io.stat.value & 0x07);
         } else if (addr == 0xFF11) { // ch1 len
             // write to ch1 length register
             io.ch1_len = value;
