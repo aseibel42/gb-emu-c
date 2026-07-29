@@ -21,3 +21,6 @@ lib/
 
 # IDE-specific files
 .vscode/
+
+# ROM files
+rom/
