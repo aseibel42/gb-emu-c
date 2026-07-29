@@ -93,12 +93,16 @@ u8 mem_read(u16 addr) {
         // Gamepad is arranged as 2x4 matrix.
         // Either action buttons or d-pad is selected according to JOYP flags.
         if (addr == 0xFF00) {
-            // Lower nibble is read from external gamepad state
-            value = io.joyp.value | 0xF;
+            // Only the lower nibble is read from external gamepad state (bits 0-3).
+            // Bits 6-7 are unused and always read as 1.
+            // Both rows can be selected at once, in which case the
+            // register reads the two nibbles wired together.
+            value = io.joyp.value | 0xCF;
             if (!io.joyp.select_btns) {
-                value &= btns.ctrl;
-            } else if (!io.joyp.select_dpad) {
-                value &= btns.dpad;
+                value &= 0xF0 | btns.ctrl;
+            }
+            if (!io.joyp.select_dpad) {
+                value &= 0xF0 | btns.dpad;
             }
         } else if (addr == 0xFF69) {
             u8 palette_addr = io.bgpi & 0x3F;
