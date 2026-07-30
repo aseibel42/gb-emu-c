@@ -1,0 +1,5 @@
+Tetris.gb 2490.315
+super_mario_land.gb 2787.230
+donkey_kong.gb 2502.835
+dmg-acid2.gb 2738.107
+pokemon_crystal.gbc 2353.897

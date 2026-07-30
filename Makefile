@@ -71,7 +71,7 @@ TEST_OBJS := $(filter-out $(OBJDIR)main$(OBJEXT) $(OBJDIR)emu$(OBJEXT) $(OBJDIR)
 
 # Remove built files
 clean:
-	@$(RM) -f $(OBJS) $(OUTDIR)$(EXE) $(OUTDIR)mealybug
+	@$(RM) -f $(OBJS) $(OUTDIR)$(EXE) $(OUTDIR)mealybug $(OUTDIR)bench
 
 # Create directories
 $(OUTDIR) $(OBJDIR):
@@ -86,6 +86,10 @@ test-timings: $(TESTDIR)$(UNITY) $(TESTDIR)$(T_TIME)
 	$(CC) $(CFLAGS) $()src/cpu.c src/debug.c src/dma.c src/mem.c src/stack.c src/instruction.c src/instruction_table.c src/timer.c test/unity.c test/timings.c -o $(OUTDIR)test_timings
 	$(OUTDIR)test_timings
 
+# Headless driver: run a rom for n frames with no window, dump the screen
+$(OUTDIR)headless: $(TEST_OBJS) $(TESTDIR)headless.c | $(OUTDIR)
+	$(CC) $(INCS) $(CFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS)
+
 # Mealybug Tearoom Tests: ppu register writes during mode 3, scored by
 # comparing the screen at the LD B,B breakpoint against reference screenshots.
 $(OUTDIR)mealybug: $(TEST_OBJS) $(TESTDIR)mealybug.c | $(OUTDIR)
@@ -95,4 +99,18 @@ test-mealybug: $(OUTDIR)mealybug
 	@sh $(TESTDIR)fetch_mealybug.sh
 	@python3 $(TESTDIR)mealybug.py
 
-.PHONY: all clean run test-timings test-mealybug
+# Throughput benchmark. `make bench-baseline` records the current numbers,
+# `make bench` scores against them, so a change can be measured either side of
+# itself: make bench-baseline; <edit>; make bench
+$(OUTDIR)bench: $(TEST_OBJS) $(TESTDIR)bench.c | $(OUTDIR)
+	$(CC) $(INCS) $(CFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS)
+
+BENCH_BASELINE := $(TESTDIR)bench_baseline.txt
+
+bench: $(OUTDIR)bench
+	@SDL_AUDIODRIVER=dummy $< $(if $(wildcard $(BENCH_BASELINE)),-b $(BENCH_BASELINE)) $(BENCH_ARGS)
+
+bench-baseline: $(OUTDIR)bench
+	@SDL_AUDIODRIVER=dummy $< -o $(BENCH_BASELINE) $(BENCH_ARGS)
+
+.PHONY: all clean run test-timings test-mealybug bench bench-baseline

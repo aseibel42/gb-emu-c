@@ -39,5 +39,9 @@ typedef union {
 void ppu_init();
 void ppu_tick();
 
+// Dot reached within the current scanline, 1-based, for harnesses probing when
+// a register write lands relative to the pixel being drawn.
+u32 ppu_line_dot();
+
 extern u8* cgb_palette;
 extern u16 dmg_palette[4];

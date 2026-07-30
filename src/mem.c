@@ -10,6 +10,14 @@
 
 Bus bus = {0};
 
+// Tracing for the CGB vram dma paths. Off by default: hdma_tick() runs every
+// hblank of an active transfer, so leaving these on floods stdout and dwarfs
+// the emulation itself. Build with -DDMA_TRACE=1 to get them back.
+#ifndef DMA_TRACE
+#define DMA_TRACE 0
+#endif
+#define dma_trace(...) do { if (DMA_TRACE) printf(__VA_ARGS__); } while (0)
+
 static bool dma_active = false;
 static u8 dma_delay = 0;
 static u8 dma_offset = 0;
@@ -240,7 +248,7 @@ void mem_write(u16 addr, u8 value) {
             if (hdma_active){
                 // Turn off hdma if already active
                 hdma_active = false;
-                printf("stopping prev dma transfer\n");
+                dma_trace("stopping prev dma transfer\n");
             } else {
                 // Start hdma if not already active
                 vram_dma_start(io.vdmac.length);
@@ -318,7 +326,7 @@ void hdma_tick() {
 
     if (io.vdmac.length == 0) {
         hdma_active = false;
-        printf("hdma done\n");
+        dma_trace("hdma done\n");
     }
 
     io.vdmac.length -= 1;
@@ -338,19 +346,19 @@ void vram_dma_start(u8 length) {
     u8* src_ptr = NULL;
     u8* src_ptr_2 = NULL;
     u8* dest_ptr = bus.vram + dest_addr;
-    printf("dest addr: 0x%x ", dest_addr);
-    printf("src addr: 0x%x ", src_addr);
+    dma_trace("dest addr: 0x%x ", dest_addr);
+    dma_trace("src addr: 0x%x ", src_addr);
 
     if (src_addr < 0x4000) { // ROM bank 0
         cutoff_addr = 0x4000;
         src_ptr = bus.rom_0 + src_addr;
         src_ptr_2 = bus.rom_1;
-        printf("src region: rom0\n");
+        dma_trace("src region: rom0\n");
     } else if (src_addr < 0x8000) { // ROM switchable bank 1
         cutoff_addr = 0x8000;
         src_ptr = bus.rom_1 + src_addr - 0x4000;
         src_ptr_2 = bus.vram;
-        printf("src region: rom1\n");
+        dma_trace("src region: rom1\n");
     } else if (src_addr < 0xA000) { // VRAM - Shouldn't happen
         cutoff_addr = 0xA000;
         src_ptr = bus.vram + src_addr - 0x8000;
@@ -360,43 +368,43 @@ void vram_dma_start(u8 length) {
         cutoff_addr = 0xC000;
         src_ptr = bus.sram + src_addr - 0xA000;
         src_ptr_2 = bus.wram_0;
-        printf("src region: sram\n");
+        dma_trace("src region: sram\n");
     } else if (src_addr < 0xD000) { // WRAM0
         cutoff_addr = 0xD000;
         src_ptr = bus.wram_0 + src_addr - 0xC000;
         // printf("src addr: %x", src_addr);
         src_ptr_2 = bus.wram_1;
-        printf("src region: wram0\n");
+        dma_trace("src region: wram0\n");
     } else if (src_addr < 0xE000) { // WRAM1-7
         cutoff_addr = 0xE000;
         src_ptr = bus.wram_1 + src_addr  - 0xD000;
         src_ptr_2 = NULL;
-        printf("src region: wram1-7\n");
+        dma_trace("src region: wram1-7\n");
     } else {
-        printf("outside range\n");
+        dma_trace("outside range\n");
     }
 
     if (!io.vdmac.mode){
         // Perform immediate gpdma transfer
-        printf("performing gpdma transfer\n");
+        dma_trace("performing gpdma transfer\n");
         u16 first_mem_transfer_max = cutoff_addr - src_addr;
         if (num_bytes_to_transfer <= first_mem_transfer_max){
-            printf("single transfer 0x%x bytes \n", num_bytes_to_transfer);
+            dma_trace("single transfer 0x%x bytes \n", num_bytes_to_transfer);
             memcpy(dest_ptr, src_ptr, num_bytes_to_transfer);
         }
         else {
             // Transfer from first memory bank
-            printf("1 of 2 transfers\n");
+            dma_trace("1 of 2 transfers\n");
             memcpy(dest_ptr, src_ptr, first_mem_transfer_max);
 
             // Second transfer
             u16 remaining_bytes_to_transfer = num_bytes_to_transfer - first_mem_transfer_max;
-            printf("2 of 2 transfers\n");
+            dma_trace("2 of 2 transfers\n");
             memcpy(dest_ptr + first_mem_transfer_max, src_ptr_2, remaining_bytes_to_transfer);
         }
     } else {
         // Start hdma transfer - will be executed by hdma_tick()
-        printf("Starting hdma transfer\n");
+        dma_trace("Starting hdma transfer\n");
         hdma_dest_ptr = dest_ptr;
         hdma_src_ptr = src_ptr;
         hdma_active = true;
