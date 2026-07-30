@@ -17,6 +17,9 @@ typedef struct {
 static u32 ppu_frame;
 static u32 ppu_dots;
 
+// length of the current line's mode 3, in dots (172 + penalties)
+static u16 mode3_dots = 172;
+
 static u8 line_sprite_count = 0;
 static sprite_info line_sprites[10];
 
@@ -40,6 +43,7 @@ static inline void reverse_bits(u8* x) {
 void ppu_init(bool cgb) {
     ppu_frame = 0;
     ppu_dots = 0;
+    mode3_dots = 172;
 
     if (cgb) {
         cgb_palette = malloc(128);
@@ -631,15 +635,90 @@ void ppu_end_frame() {
     win_y = 0;
 }
 
+// The PPU emits one pixel per dot, so mode 3 is at minimum 160 + 12 = 172
+// dots, but it also stalls for a few dots in three situations: discarding the
+// fine scroll, pointing the bg fetcher at the window, and fetching an object.
+// Those "penalties" lengthen mode 3 and shorten mode 0 by the same amount,
+// since a line is always DOTS_PER_LINE dots long.
+u16 ppu_mode3_penalty() {
+    // SCX % 8 pixels are discarded from the leftmost tile
+    u16 penalty = io.scroll_x & 7;
+
+    // 6 dots to set the bg fetcher up for the window
+    bool window = io.lcdc.win_enable && io.lcd_y >= io.win_y && io.win_x < 167;
+    if (window) penalty += 6;
+
+    if (!io.lcdc.obj_enable) return penalty;
+
+    // Every object costs 6 dots to fetch its tile, plus a wait for the bg
+    // fetch it interrupted to finish. That wait is paid at most once per
+    // bg/window tile, by whichever object's leftmost pixel sits furthest left
+    // within it, and is 5 dots minus that pixel's offset into the tile.
+    // Tiles are identified by where their left edge lands on screen, which is
+    // unambiguous: a given pixel is fetched from the window or from the
+    // background, never both.
+    u8 fetch_count = 0;
+    i16 fetch_tile_x[10];
+    u8 fetch_offset[10];
+    i16 win_start_x = (i16)io.win_x - 7;
+
+    for (u8 i = 0; i < line_sprite_count; i++) {
+        u8 x_pos = line_sprites[i].x_pos;
+
+        // entirely off the right edge, so never fetched
+        if (x_pos >= 168) continue;
+
+        // entirely off the left edge (ppu_oam_scan currently drops these)
+        if (x_pos == 0) {
+            penalty += 11;
+            continue;
+        }
+
+        penalty += 6;
+
+        // offset of the object's leftmost pixel into the tile it lands in
+        i16 pixel_x = (i16)x_pos - 8;
+        u8 offset = window && pixel_x >= win_start_x
+            ? (pixel_x - win_start_x) & 7
+            : (pixel_x + io.scroll_x) & 7;
+        i16 tile_x = pixel_x - offset;
+
+        u8 f = 0;
+        while (f < fetch_count && fetch_tile_x[f] != tile_x) f++;
+        if (f == fetch_count) {
+            fetch_tile_x[f] = tile_x;
+            fetch_offset[f] = offset;
+            fetch_count++;
+        } else if (offset < fetch_offset[f]) {
+            fetch_offset[f] = offset;
+        }
+    }
+
+    for (u8 f = 0; f < fetch_count; f++) {
+        if (fetch_offset[f] < 5) penalty += 5 - fetch_offset[f];
+    }
+
+    return penalty;
+}
+
 void ppu_mode_oam() {
     if (ppu_dots >= 80) {
+        mode3_dots = 172 + ppu_mode3_penalty();
         ppu_set_mode(PPU_MODE_XFER);
-        is_cgb() ? ppu_draw_line_cgb() : ppu_draw_line();
     }
 }
 
 void ppu_mode_xfer() {
-    if (ppu_dots >= 80 + 172) { // TODO: add extra dots from "penalties"
+    if (ppu_dots >= 80u + mode3_dots) {
+        // The line is drawn at the end of mode 3, not the start. Hardware
+        // samples SCX/SCY per tile fetch throughout mode 3, so a game that
+        // writes them late in the line still gets the new value for most of
+        // it. Super Mario Land's vblank routine overruns vblank on the frames
+        // where it has to push a new tile column, and lands its SCX=0 write
+        // partway into line 1; drawing on entry to mode 3 latched the stale
+        // scroll and shifted the whole status bar row.
+        is_cgb() ? ppu_draw_line_cgb() : ppu_draw_line();
+
         ppu_set_mode(PPU_MODE_HBLANK);
         hdma_tick();
     }
