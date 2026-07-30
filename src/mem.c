@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "cart.h"
 #include "io.h"
@@ -27,41 +28,55 @@ extern SquareChannel ch2;
 extern WaveChannel ch3;
 extern NoiseChannel ch4;
 
+void mem_destroy() {
+    free(vram);
+    free(wram);
+    vram = NULL;
+    wram = NULL;
+    bus.vram = NULL;
+    bus.wram_0 = NULL;
+    bus.wram_1 = NULL;
+}
+
 void mem_init(bool cgb) {
+    mem_destroy();
+
     // Video RAM
-    // DMG - 16kb
-    // CGB - 32kb
-    vram = malloc(VRAM_BANK_SIZE * (cgb ? 2 : 1));
+    // DMG - 8kb
+    // CGB - 16kb
+    vram = calloc(cgb ? 2 : 1, VRAM_BANK_SIZE);
     if (!vram) {
-        perror("Failed to allocate memory for VRAM\n");
-        goto cleanup_vram;
+        perror("Failed to allocate memory for VRAM");
+        mem_destroy();
+        return;
     }
 
     // Work RAM
     // DMG - 8kb
     // CGB - 32kb
-    wram = malloc(WRAM_BANK_SIZE * (cgb ? 8 : 2));
+    wram = calloc(cgb ? 8 : 2, WRAM_BANK_SIZE);
     if (!wram) {
-        perror("Failed to allocate memory for WRAM\n");
-        goto cleanup_wram;
+        perror("Failed to allocate memory for WRAM");
+        mem_destroy();
+        return;
     }
+
+    memset(oam, 0, sizeof(oam));
+
+    // init dma transfer state
+    dma_active = false;
+    dma_delay = 0;
+    dma_offset = 0;
+    dma_source_addr = 0;
+    hdma_active = false;
+    hdma_dest_ptr = NULL;
+    hdma_src_ptr = NULL;
 
     bus.page_0 = (u8*)&io;
     bus.oam = oam;
     bus.vram = vram;
     bus.wram_0 = wram;
     bus.wram_1 = wram + WRAM_BANK_SIZE;
-    return;
-
-cleanup_wram:
-    free(wram);
-    wram = NULL;
-    bus.wram_0 = NULL;
-    bus.wram_1 = NULL;
-cleanup_vram:
-    free(vram);
-    vram = NULL;
-    bus.vram = NULL;
 }
 
 u8 mem_read(u16 addr) {
@@ -93,12 +108,16 @@ u8 mem_read(u16 addr) {
         // Gamepad is arranged as 2x4 matrix.
         // Either action buttons or d-pad is selected according to JOYP flags.
         if (addr == 0xFF00) {
-            // Lower nibble is read from external gamepad state
-            value = io.joyp.value | 0xF;
+            // Only the lower nibble is read from external gamepad state (bits 0-3).
+            // Bits 6-7 are unused and always read as 1.
+            // Both rows can be selected at once, in which case the
+            // register reads the two nibbles wired together.
+            value = io.joyp.value | 0xCF;
             if (!io.joyp.select_btns) {
-                value &= btns.ctrl;
-            } else if (!io.joyp.select_dpad) {
-                value &= btns.dpad;
+                value &= 0xF0 | btns.ctrl;
+            }
+            if (!io.joyp.select_dpad) {
+                value &= 0xF0 | btns.dpad;
             }
         } else if (addr == 0xFF69) {
             u8 palette_addr = io.bgpi & 0x3F;
@@ -144,6 +163,11 @@ void mem_write(u16 addr, u8 value) {
         } else if (addr == 0xFF04) {
             // Writing anything to DIV register resets it to 0
             io.div = 0;
+        } else if (addr == 0xFF41) {
+            // Only the interrupt source bits are writable (bits 3-6).
+            // The ppu mode (bits 0-1) and the LY==LYC flag (bit 2) are read-only.
+            // Bit 7 is unused and always reads back as 1.
+            io.stat.value = 0x80 | (value & 0x78) | (io.stat.value & 0x07);
         } else if (addr == 0xFF11) { // ch1 len
             // write to ch1 length register
             io.ch1_len = value;
@@ -331,7 +355,7 @@ void vram_dma_start(u8 length) {
         cutoff_addr = 0xA000;
         src_ptr = bus.vram + src_addr - 0x8000;
         src_ptr_2 = bus.sram;
-        printf("DMA start_addr in VRAM, should not happen");
+        fprintf(stderr, "DMA start_addr in VRAM, should not happen\n");
     } else if (src_addr < 0xC000) { // SRAM
         cutoff_addr = 0xC000;
         src_ptr = bus.sram + src_addr - 0xA000;

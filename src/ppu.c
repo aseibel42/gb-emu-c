@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "cart.h"
@@ -23,8 +24,7 @@ static sprite_info line_sprites[10];
 static u8 win_y = 0;
 static bool win_test_y = false;
 
-// static u32 dmg_palette[4] = {0xFFFFFFFF, 0xFFAAAAAA, 0xFF555555, 0xFF000000};
-static u16 dmg_palette[4] = {0xFFFF, 0xDAD6, 0xA94A, 0x8000};
+u16 dmg_palette[4] = {0xFFFF, 0xDAD6, 0xA94A, 0x8000};
 u8* cgb_palette = {0};
 
 static inline void blend(u8* dest, u8 value, u8 mask) {
@@ -36,14 +36,21 @@ static inline void reverse_bits(u8* x) {
     *x = ((*x * 0x0802LU & 0x22110LU) | (*x * 0x8020LU & 0x88440LU)) * 0x10101LU >> 16;
 }
 
-void ppu_init(bool cgb) {
+void ppu_init() {
     ppu_frame = 0;
     ppu_dots = 0;
 
-    if (cgb) {
+    // Window and sprite state
+    win_y = 0;
+    win_test_y = false;
+    line_sprite_count = 0;
+    memset(line_sprites, 0xFF, sizeof(line_sprites));
+
+    // CGB palette (must also be initialized on DMG to avoid segfault)
+    if (!cgb_palette) {
         cgb_palette = malloc(128);
-        memset(cgb_palette, 0xFF, 128);
     }
+    memset(cgb_palette, 0xFF, 128);
 }
 
 void sort_net_10(u16 a[]) {
@@ -96,7 +103,7 @@ void ppu_oam_scan() {
 void ppu_draw_line_cgb() {
 
     if (io.lcd_y >= Y_RESOLUTION) {
-        printf("SCANLINE Y = %d (THIS SHOULD NEVER HAPPEN!)\n", io.lcd_y);
+        fprintf(stderr, "SCANLINE Y = %d (THIS SHOULD NEVER HAPPEN!)\n", io.lcd_y);
         return;
     }
 
@@ -393,7 +400,7 @@ void ppu_draw_line_cgb() {
 void ppu_draw_line() {
 
     if (io.lcd_y >= Y_RESOLUTION) {
-        printf("SCANLINE Y = %d (THIS SHOULD NEVER HAPPEN!)\n", io.lcd_y);
+        fprintf(stderr, "SCANLINE Y = %d (THIS SHOULD NEVER HAPPEN!)\n", io.lcd_y);
         return;
     }
 
@@ -591,6 +598,23 @@ void ppu_draw_line() {
     memcpy(scanline_ptr, pixel_colors, 2*160);
 }
 
+// Enter a new ppu mode, raising a STAT interrupt if the game selected that mode
+// as an interrupt source (STAT bits 3-5).
+void ppu_set_mode(u8 mode) {
+    io.stat.ppu_mode = mode;
+
+    u8 source = 0;
+    switch (mode) {
+        case PPU_MODE_HBLANK: source = io.stat.hblank_int; break;
+        case PPU_MODE_VBLANK: source = io.stat.vblank_int; break;
+        case PPU_MODE_OAM:    source = io.stat.oam_int;    break;
+    }
+
+    if (source) {
+        cpu_request_interrupt(INTERRUPT_STAT);
+    }
+}
+
 void ppu_end_line() {
     ppu_dots = 0;
     io.lcd_y++;
@@ -615,14 +639,14 @@ void ppu_end_frame() {
 
 void ppu_mode_oam() {
     if (ppu_dots >= 80) {
-        io.stat.ppu_mode = PPU_MODE_XFER;
+        ppu_set_mode(PPU_MODE_XFER);
         is_cgb() ? ppu_draw_line_cgb() : ppu_draw_line();
     }
 }
 
 void ppu_mode_xfer() {
     if (ppu_dots >= 80 + 172) { // TODO: add extra dots from "penalties"
-        io.stat.ppu_mode = PPU_MODE_HBLANK;
+        ppu_set_mode(PPU_MODE_HBLANK);
         hdma_tick();
     }
 }
@@ -632,13 +656,10 @@ void ppu_mode_hblank() {
         ppu_end_line();
 
         if (io.lcd_y >= Y_RESOLUTION) {
-            io.stat.ppu_mode = PPU_MODE_VBLANK;
+            ppu_set_mode(PPU_MODE_VBLANK);
             cpu_request_interrupt(INTERRUPT_VBLANK);
-            if (io.stat.vblank_int) {
-                cpu_request_interrupt(INTERRUPT_STAT);
-            }
         } else {
-            io.stat.ppu_mode = PPU_MODE_OAM;
+            ppu_set_mode(PPU_MODE_OAM);
             ppu_oam_scan();
         }
     }
@@ -650,7 +671,7 @@ void ppu_mode_vblank() {
 
         if (io.lcd_y >= LINES_PER_FRAME) {
             ppu_end_frame();
-            io.stat.ppu_mode = PPU_MODE_OAM;
+            ppu_set_mode(PPU_MODE_OAM);
             ppu_oam_scan();
         }
     }

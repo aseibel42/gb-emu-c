@@ -57,6 +57,7 @@ typedef struct {
     bool ram_enable;
     bool mbc_mode;
     char *name;
+    char *save_path;
 } Cart;
 
 extern Cart cart;
@@ -64,9 +65,6 @@ extern Cart cart;
 void cart_load(char *filename);
 void cart_battery_load();
 void cart_battery_save();
-void get_stem(char *path);
+char *get_stem(const char *path);
 
 bool is_cgb();
-
-extern char stem[256];
-extern char save[256];

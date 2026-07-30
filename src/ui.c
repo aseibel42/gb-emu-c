@@ -1,7 +1,8 @@
-#include <SDL2/SDL_scancode.h>
-#include <SDL2/SDL_ttf.h>
+#include <SDL3/SDL_scancode.h>
+#include <SDL3_ttf/SDL_ttf.h>
 #include <dirent.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "cart.h"
 #include "emu.h"
@@ -66,26 +67,28 @@ void limit_fps() {
 }
 
 void ui_init() {
+    // Discard the previous game's surface and texture
+    SDL_DestroySurface(sdlSurface);
+    SDL_DestroyTexture(sdlTexture);
+
     // A surface is located in RAM and can be efficiently updated on CPU
-    sdlSurface = SDL_CreateRGBSurface(
-        0, // flags
+    sdlSurface = SDL_CreateSurface(
         X_RESOLUTION,
         Y_RESOLUTION,
-        32, // depth
-        0x00FF0000, // R mask
-        0x0000FF00, // G mask
-        0x000000FF, // B mask
-        0xFF000000  // A mask
+        SDL_PIXELFORMAT_XRGB8888
     );
 
     // A texture is located in VRAM and uses hardware rendering
     sdlTexture = SDL_CreateTexture(
         sdlRenderer,
-        SDL_PIXELFORMAT_BGR555,
+        SDL_PIXELFORMAT_XBGR1555,
         SDL_TEXTUREACCESS_STREAMING,
         X_RESOLUTION,
         Y_RESOLUTION
     );
+
+    // SDL3 defaults new textures to linear filtering; use nearest to keep the crisp pixelated look SDL2 had by default
+    SDL_SetTextureScaleMode(sdlTexture, SDL_SCALEMODE_NEAREST);
 
     // // Debug window
     // SDL_CreateWindowAndRenderer(
@@ -201,32 +204,32 @@ void ui_on_key(SDL_Keycode key_code, u8 state) {
             break;
 
         case SDLK_BACKSPACE:
-        case SDLK_z:
+        case SDLK_Z:
             btns.b = state;
             break;
 
         case SDLK_SPACE:
-        case SDLK_x:
+        case SDLK_X:
             btns.a = state;
             break;
 
         case SDLK_UP:
-        case SDLK_w:
+        case SDLK_W:
             btns.up = state;
             break;
 
         case SDLK_DOWN:
-        case SDLK_s:
+        case SDLK_S:
             btns.down = state;
             break;
 
         case SDLK_LEFT:
-        case SDLK_a:
+        case SDLK_A:
             btns.left = state;
             break;
 
         case SDLK_RIGHT:
-        case SDLK_d:
+        case SDLK_D:
             btns.right = state;
             break;
     }
@@ -234,28 +237,28 @@ void ui_on_key(SDL_Keycode key_code, u8 state) {
 
 void ui_handle_events() {
     SDL_Event e;
-    while (SDL_PollEvent(&e) > 0) {
-        if (e.type == SDL_KEYDOWN || e.type == SDL_KEYUP) {
-            ui_on_key(e.key.keysym.sym, !e.key.state);
+    while (SDL_PollEvent(&e)) {
+        if (e.type == SDL_EVENT_KEY_DOWN || e.type == SDL_EVENT_KEY_UP) {
+            ui_on_key(e.key.key, !e.key.down);
         }
 
-        const u8* keyboard_state = SDL_GetKeyboardState(0);
+        const bool* keyboard_state = SDL_GetKeyboardState(NULL);
         if (keyboard_state[SDL_SCANCODE_RCTRL] || keyboard_state[SDL_SCANCODE_LCTRL]) {
             // if (keyboard_state[SDL_SCANCODE_RSHIFT] || keyboard_state[SDL_SCANCODE_LSHIFT])
-            if (e.type == SDL_KEYUP) {
-                if (e.key.keysym.sym == SDLK_b) {
+            if (e.type == SDL_EVENT_KEY_UP) {
+                if (e.key.key == SDLK_B) {
                     cart_battery_save();
-                } else if (e.key.keysym.sym == SDLK_COMMA) {
+                } else if (e.key.key == SDLK_COMMA) {
                     emu_speed_down();
-                } else if (e.key.keysym.sym == SDLK_PERIOD) {
+                } else if (e.key.key == SDLK_PERIOD) {
                     emu_speed_up();
-                } else if (e.key.keysym.sym == SDLK_q) {
+                } else if (e.key.key == SDLK_Q) {
                     emu_quit_game();
                 }
             }
         }
 
-        if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_CLOSE) {
+        if (e.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) {
             emu_exit();
         }
     }
@@ -270,8 +273,8 @@ void ui_request_frame() {
     SDL_UpdateTexture(sdlTexture, 0, sdlSurface->pixels, sdlSurface->pitch);
 
     // Render
-    SDL_RenderSetViewport(sdlRenderer, &leftViewport);
-    SDL_RenderCopy(sdlRenderer, sdlTexture, NULL, NULL);
+    SDL_SetRenderViewport(sdlRenderer, &leftViewport);
+    SDL_RenderTexture(sdlRenderer, sdlTexture, NULL, NULL);
     // ui_update_debug_window();
     // ui_update_tilemap_window(sdlTilemapSurface, sdlTilemapRenderer, sdlTilemapTexture, TILEMAP1_START_ADDR);
     // ui_update_tilemap_window(sdlTilemapSurface2, sdlTilemapRenderer2, sdlTilemapTexture2, TILEMAP2_START_ADDR);
@@ -302,7 +305,7 @@ void display_tile(SDL_Surface *surface, u16 tileNum, int x, int y) {
             rc.w = ui_scale;
             rc.h = ui_scale;
 
-            SDL_FillRect(surface, &rc, debug_palette[color]);
+            SDL_FillSurfaceRect(surface, &rc, debug_palette[color]);
         }
     }
 }
@@ -381,15 +384,15 @@ void display_tile(SDL_Surface *surface, u16 tileNum, int x, int y) {
 
 void ui_update_audio_window() {
     // set right viewport
-    SDL_RenderSetViewport(sdlRenderer, &rightViewport);
+    SDL_SetRenderViewport(sdlRenderer, &rightViewport);
 
     // Draw centerlines
     SDL_SetRenderDrawColor(sdlRenderer, 128, 128, 128, 255); // gray centerlines
-    SDL_RenderDrawLine(sdlRenderer, 0, AUDIO_WINDOW_HEIGHT / 4, AUDIO_WINDOW_WIDTH, AUDIO_WINDOW_HEIGHT / 4);
-    SDL_RenderDrawLine(sdlRenderer, 0, 2*AUDIO_WINDOW_HEIGHT / 4, AUDIO_WINDOW_WIDTH, 2*AUDIO_WINDOW_HEIGHT / 4);
-    SDL_RenderDrawLine(sdlRenderer, 0, 3*AUDIO_WINDOW_HEIGHT / 4, AUDIO_WINDOW_WIDTH, 3*AUDIO_WINDOW_HEIGHT / 4);
+    SDL_RenderLine(sdlRenderer, 0, AUDIO_WINDOW_HEIGHT / 4.0f, AUDIO_WINDOW_WIDTH, AUDIO_WINDOW_HEIGHT / 4.0f);
+    SDL_RenderLine(sdlRenderer, 0, 2*AUDIO_WINDOW_HEIGHT / 4.0f, AUDIO_WINDOW_WIDTH, 2*AUDIO_WINDOW_HEIGHT / 4.0f);
+    SDL_RenderLine(sdlRenderer, 0, 3*AUDIO_WINDOW_HEIGHT / 4.0f, AUDIO_WINDOW_WIDTH, 3*AUDIO_WINDOW_HEIGHT / 4.0f);
 
-    SDL_RenderDrawLine(sdlRenderer, AUDIO_WINDOW_WIDTH / 2, 0, AUDIO_WINDOW_WIDTH / 2, AUDIO_WINDOW_HEIGHT);
+    SDL_RenderLine(sdlRenderer, AUDIO_WINDOW_WIDTH / 2.0f, 0, AUDIO_WINDOW_WIDTH / 2.0f, AUDIO_WINDOW_HEIGHT);
 
     u16 ch1_shift = ch1.trigger_index - (TARGET_FRAMES / 2);
     u16 ch2_shift = ch2.trigger_index - (TARGET_FRAMES / 2);
@@ -403,7 +406,7 @@ void ui_update_audio_window() {
     for (int i = 1; i < TARGET_FRAMES; i++) {
         int x2 = i * AUDIO_WINDOW_WIDTH / (TARGET_FRAMES);
         int y2 = (int)(AUDIO_WINDOW_HEIGHT / 8) - ch1.target_sample_buffer->combined[(i + ch1_shift) * 2] * (int)(AUDIO_WINDOW_HEIGHT / 8);
-        SDL_RenderDrawLine(sdlRenderer, x1, y1, x2, y2);
+        SDL_RenderLine(sdlRenderer, x1, y1, x2, y2);
         x1 = x2;
         y1 = y2;
     }
@@ -415,7 +418,7 @@ void ui_update_audio_window() {
     for (int i = 1; i < TARGET_FRAMES; i++) {
         int x2 = i * AUDIO_WINDOW_WIDTH / TARGET_FRAMES;
         int y2 = (int)(AUDIO_WINDOW_HEIGHT * 3 / 8) - ch2.target_sample_buffer->combined[(i + ch2_shift) * 2] * (int)(AUDIO_WINDOW_HEIGHT / 8);
-        SDL_RenderDrawLine(sdlRenderer, x1, y1, x2, y2);
+        SDL_RenderLine(sdlRenderer, x1, y1, x2, y2);
         x1 = x2;
         y1 = y2;
     }
@@ -427,7 +430,7 @@ void ui_update_audio_window() {
     for (int i = 1; i < TARGET_FRAMES; i++) {
         int x2 = i * AUDIO_WINDOW_WIDTH / TARGET_FRAMES;
         int y2 = (int)(AUDIO_WINDOW_HEIGHT * 5 / 8) - ch3.target_sample_buffer->combined[(i + ch3_shift) * 2] * (int)(AUDIO_WINDOW_HEIGHT / 8);
-        SDL_RenderDrawLine(sdlRenderer, x1, y1, x2, y2);
+        SDL_RenderLine(sdlRenderer, x1, y1, x2, y2);
         x1 = x2;
         y1 = y2;
     }
@@ -439,7 +442,7 @@ void ui_update_audio_window() {
     for (int i = 1; i < TARGET_FRAMES; i++) {
         int x2 = i * AUDIO_WINDOW_WIDTH / TARGET_FRAMES;
         int y2 = (int)(AUDIO_WINDOW_HEIGHT * 7 / 8) - ch4.target_sample_buffer->combined[(i + ch4_shift) * 2] * (int)(AUDIO_WINDOW_HEIGHT / 8);
-        SDL_RenderDrawLine(sdlRenderer, x1, y1, x2, y2);
+        SDL_RenderLine(sdlRenderer, x1, y1, x2, y2);
         x1 = x2;
         y1 = y2;
     }
@@ -466,7 +469,7 @@ int load_rom_list(const char *folder, char filenames[][MAX_FILENAME], int max_fi
 
 void emu_run() {
     // Initialize SDL
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+    if (!SDL_Init(SDL_INIT_VIDEO)) {
         fprintf(stderr, "SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
         return;
     }
@@ -474,18 +477,17 @@ void emu_run() {
     printf("SDL INIT\n");
 
     // Main window
-    if (SDL_CreateWindowAndRenderer(
+    if (!SDL_CreateWindowAndRenderer(
+        "Gameboy Screen",
         SCREEN_WIDTH*2,
         SCREEN_HEIGHT,
         0, // flags
         &sdlWindow,
         &sdlRenderer
-    ) < 0) {
-        fprintf(stdout, "SDL failed to create window and renderer! SDL_Error: %s\n", SDL_GetError());
+    )) {
+        fprintf(stderr, "SDL failed to create window and renderer! SDL_Error: %s\n", SDL_GetError());
         return;
     }
-
-    SDL_SetWindowTitle(sdlWindow, "Gameboy Screen");
 
     char* rom_path = malloc(256);
 
@@ -518,11 +520,11 @@ void choose_rom_screen(char* rom_path) {
 
     while (running) {
         while (SDL_PollEvent(&e)) {
-            if (e.type == SDL_QUIT) {
+            if (e.type == SDL_EVENT_QUIT) {
                 running = 0;
                 quit = true;
-            } else if (e.type == SDL_KEYDOWN) {
-                switch (e.key.keysym.sym) {
+            } else if (e.type == SDL_EVENT_KEY_DOWN) {
+                switch (e.key.key) {
                     case SDLK_UP:
                         if (selected > 0) selected--;
                         break;
@@ -537,7 +539,7 @@ void choose_rom_screen(char* rom_path) {
             }
         }
 
-        SDL_RenderSetViewport(sdlRenderer, &fullViewport);
+        SDL_SetRenderViewport(sdlRenderer, &fullViewport);
         SDL_SetRenderDrawColor(sdlRenderer, 0, 0, 0, 255);
         SDL_RenderClear(sdlRenderer);
 
@@ -553,24 +555,24 @@ void choose_rom_screen(char* rom_path) {
 
         for (int i = 0; i < rom_count; ++i) {
             char display_name[DISPLAY_NAME_LEN + 1];
-            snprintf(display_name, sizeof(display_name), "%.32s", roms[i]);
+            snprintf(display_name, sizeof(display_name), "%.*s", DISPLAY_NAME_LEN, roms[i]);
 
             SDL_Surface *surface = TTF_RenderText_Solid(
-                font, display_name, i == selected ? selectedColor : textColor);
+                font, display_name, 0, i == selected ? selectedColor : textColor);
             SDL_Texture *texture = SDL_CreateTextureFromSurface(sdlRenderer, surface);
 
             int col = i / max_rows_per_column;
             int row = i % max_rows_per_column;
 
-            SDL_Rect dst = {
+            SDL_FRect dst = {
                 50 + col * col_width,     // x position
                 40 + row * 30,            // y position
                 surface->w,
                 surface->h
             };
 
-            SDL_RenderCopy(sdlRenderer, texture, NULL, &dst);
-            SDL_FreeSurface(surface);
+            SDL_RenderTexture(sdlRenderer, texture, NULL, &dst);
+            SDL_DestroySurface(surface);
             SDL_DestroyTexture(texture);
         }
 

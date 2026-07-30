@@ -6,10 +6,10 @@
 #define DOTS_PER_LINE 456
 #define TILES_PER_LINE 20
 
-#define PPU_MODE_OAM 0
-#define PPU_MODE_XFER 1
-#define PPU_MODE_VBLANK 2
-#define PPU_MODE_HBLANK 3
+#define PPU_MODE_HBLANK 0
+#define PPU_MODE_VBLANK 1
+#define PPU_MODE_OAM 2
+#define PPU_MODE_XFER 3
 
 typedef struct {
     u8 y_pos;
@@ -36,7 +36,8 @@ typedef union {
     };
 } bgw_attr;
 
-void ppu_init(bool);
+void ppu_init();
 void ppu_tick();
 
 extern u8* cgb_palette;
+extern u16 dmg_palette[4];

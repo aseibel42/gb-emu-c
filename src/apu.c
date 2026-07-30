@@ -1,5 +1,6 @@
+#include <stdlib.h>
 #include <string.h>
-#include <SDL2/SDL.h>
+#include <SDL3/SDL.h>
 #include <stdio.h>
 
 #include "apu.h"
@@ -23,8 +24,8 @@ u16 source_buffer_count = 0;
 float* combined_target_buffer = NULL;
 
 // Audio device
-SDL_AudioSpec desired, obtained;
-SDL_AudioDeviceID dev;
+SDL_AudioSpec desired;
+SDL_AudioStream *audio_stream;
 
 const u8 ch3_vol_shift_map[4] = {
     4, // 0% vol
@@ -40,24 +41,55 @@ const u8 wave_duty_table[4] = {
     0b01111110   // 75% duty cycle
 };
 
-void apu_init() {
-    // Initialize SDL for audio, return error if it fails
-    if (SDL_Init(SDL_INIT_AUDIO) < 0) {
-        printf("SDL_Init failed: %s\n", SDL_GetError());
+// Release everything allocated in apu_init().
+// Safe to call before the first init.
+void apu_destroy() {
+    if (audio_stream) {
+        SDL_DestroyAudioStream(audio_stream);
+        audio_stream = NULL;
     }
 
-    // Save audio device settings
-    SDL_memset(&desired, 0, sizeof(desired));
-    desired.freq = TARGET_SAMPLE_RATE; // Modern audio devices run at 48,000 Hz
-    desired.format = AUDIO_F32SYS; // 32 bit floats with system endianness
-    desired.channels = 2; // 2-channel stereo (L, R, L, R ...)
-    desired.samples = TARGET_FRAMES; // Audio samples per frame at 48,000 Hz and 60 FPS
-    desired.callback = NULL;  // No callback, manual audio handling
+    free(ch1.source_sample_buffer);
+    free(ch1.target_sample_buffer);
+    free(ch2.source_sample_buffer);
+    free(ch2.target_sample_buffer);
+    free(ch3.source_sample_buffer);
+    free(ch3.target_sample_buffer);
+    free(ch4.source_sample_buffer);
+    free(ch4.target_sample_buffer);
+    ch1 = (SquareChannel){0};
+    ch2 = (SquareChannel){0};
+    ch3 = (WaveChannel){0};
+    ch4 = (NoiseChannel){0};
 
-    // Open audio device with desired settings, return error if it fails
-    dev = SDL_OpenAudioDevice(NULL, 0, &desired, &obtained, 0);
-    if (dev == 0) {
-        printf("SDL_OpenAudioDevice failed: %s\n", SDL_GetError());
+    free(combined_target_buffer);
+    combined_target_buffer = NULL;
+}
+
+void apu_init() {
+    apu_destroy();
+
+    // Initialize SDL for audio, return error if it fails
+    if (!SDL_Init(SDL_INIT_AUDIO)) {
+        fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
+    }
+
+    // Init counter state
+    frame_sequence_counter = 0;
+    sample_tick_counter = 0;
+    apu_speed_counter = 0;
+    source_buffer_count = 0;
+
+    // Save audio device settings
+    SDL_zero(desired);
+    desired.freq = TARGET_SAMPLE_RATE; // Modern audio devices run at 48,000 Hz
+    desired.format = SDL_AUDIO_F32; // 32 bit floats with system endianness
+    desired.channels = 2; // 2-channel stereo (L, R, L, R ...)
+
+    // Open an audio stream bound to the default playback device, return error if it fails
+    audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &desired, NULL, NULL);
+    if (!audio_stream) {
+        fprintf(stderr, "SDL_OpenAudioDeviceStream failed: %s\n", SDL_GetError());
         SDL_Quit();
     }
 
@@ -72,7 +104,7 @@ void apu_init() {
     memset(combined_target_buffer, 0, TARGET_FRAMES * 2 * sizeof(float));
 
     // Unpause audio device
-    SDL_PauseAudioDevice(dev, 0);
+    SDL_ResumeAudioStreamDevice(audio_stream);
 }
 
 // Function to initialize a SquareChannel struct
@@ -100,11 +132,13 @@ SquareChannel init_square_channel(u8 ch_num) {
 
     // Check for allocation failure
     if (!ch.source_sample_buffer || !ch.target_sample_buffer) {
-        printf("Error: Failed to allocate memory for buffers\n");
+        perror("Failed to allocate memory for buffers");
     }
 
     // Initialize target buffer
-    memset(ch.target_sample_buffer, -1, sizeof(AudioBuffer));
+    if (ch.target_sample_buffer) {
+        memset(ch.target_sample_buffer, -1, sizeof(AudioBuffer));
+    }
 
     // Channel-specific references
     switch (ch_num) {
@@ -150,11 +184,13 @@ WaveChannel init_wave_channel() {
 
     // Check for allocation failure
     if (!ch.source_sample_buffer || !ch.target_sample_buffer) {
-        printf("Error: Failed to allocate memory for buffers\n");
+        perror("Failed to allocate memory for buffers");
     }
 
     // Initialize target buffer
-    memset(ch.target_sample_buffer, -1, sizeof(AudioBuffer));
+    if (ch.target_sample_buffer) {
+        memset(ch.target_sample_buffer, -1, sizeof(AudioBuffer));
+    }
 
     return ch;  // Return the initialized struct
 }
@@ -182,11 +218,13 @@ NoiseChannel init_noise_channel() {
 
     // Check for allocation failure
     if (!ch.source_sample_buffer || !ch.target_sample_buffer) {
-        printf("Error: Failed to allocate memory for buffers\n");
+        perror("Failed to allocate memory for buffers");
     }
 
     // Initialize target buffer
-    memset(ch.target_sample_buffer, -1, sizeof(AudioBuffer));
+    if (ch.target_sample_buffer) {
+        memset(ch.target_sample_buffer, -1, sizeof(AudioBuffer));
+    }
 
     return ch;  // Return the initialized struct
 }
@@ -578,7 +616,7 @@ void ch3_generate_source_audio_samples() {
 u8 ch3_get_wave_nibble(u8 index) {
     // Ensure the index is within the valid range of 0 to 31
     if (index > 31) {
-        printf("Error: invalid wave index");
+        fprintf(stderr, "Error: invalid wave index\n");
         return 0;
     }
 
@@ -673,12 +711,12 @@ void queue_audio() {
     mix_buffers(ch1.target_sample_buffer->curr, ch2.target_sample_buffer->curr, ch3.target_sample_buffer->curr, ch4.target_sample_buffer->curr, combined_target_buffer);
 
     // Add samples from buffer to audio queue (but not if queue is too large)
-    while (SDL_GetQueuedAudioSize(dev) > 4 * TARGET_FRAMES * 2 * sizeof(float)) {
+    while (SDL_GetAudioStreamQueued(audio_stream) > (int)(4 * TARGET_FRAMES * 2 * sizeof(float))) {
         SDL_Delay(1);
         // printf("Delay 1 ms---------------------------------\n");
     }
 
-    SDL_QueueAudio(dev, combined_target_buffer, TARGET_FRAMES * 2 * sizeof(float));
+    SDL_PutAudioStreamData(audio_stream, combined_target_buffer, TARGET_FRAMES * 2 * sizeof(float));
 }
 
 // Function to find trigger in middle half of combined buffer

@@ -41,6 +41,7 @@ void cpu_init(bool cgb) {
     }
 
     halted = false;
+    stopped = false;
     interrupt_master_enabled = false;
 }
 
@@ -48,8 +49,6 @@ bool cpu_step() {
     if (!halted) {
         // fetch instruction
         u8 opcode = cpu_fetch();
-        // debug_registers();
-        // getchar();
 
         // execute instruction
         op[opcode]();

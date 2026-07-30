@@ -27,14 +27,14 @@ CFLAGS := -Wall -Wextra -std=c11 -O2
 ifdef OS
     ifeq ($(OS), Windows_NT)
         # Windows settings
-        LDFLAGS := -L./lib/sdl2/lib -L./lib/sdl2_ttf/lib
-        LDLIBS := -static -lmingw32 -lSDL2main -lSDL2 -lSDL2_ttf -lsetupapi -lole32 -lgdi32 -limm32 -lversion -loleaut32 -lwinmm -lrpcrt4
-        INCS := -I./lib/sdl2/include -I./lib/sdl2/include/sdl2 -I./lib/sdl2_ttf/include -I"C:/msys64/mingw64/include"
+        LDFLAGS := -L./lib/sdl3/lib -L./lib/sdl3_ttf/lib
+        LDLIBS := -static -lmingw32 -lSDL3main -lSDL3 -lSDL3_ttf -lsetupapi -lole32 -lgdi32 -limm32 -lversion -loleaut32 -lwinmm -lrpcrt4
+        INCS := -I./lib/sdl3/include -I./lib/sdl3_ttf/include -I"C:/msys64/mingw64/include"
     endif
 else
     # Linux settings
     LDFLAGS := -L./lib
-    LDLIBS := -lSDL2 -lSDL2_ttf
+    LDLIBS := -lSDL3 -lSDL3_ttf
     INCS :=
 endif
 
