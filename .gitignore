@@ -24,3 +24,6 @@ lib/
 
 # ROM files
 rom/
+
+# Test suites
+test/mealybug/

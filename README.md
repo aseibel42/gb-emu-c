@@ -32,3 +32,13 @@ A Game Boy emulator written in C.
 - How to save: Save as normal in game, then press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd> to write a binary save file to the save/ folder - the emulator will load that save file whenever the game tries to read a save
 - How to quit: Press <kbd>Ctrl</kbd> + <kbd>Q</kbd> to quit the current game and return to the ROM menu - Close the window to quit the emulator
 - How to change emulator speed: Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd><</kbd> or <kbd>></kbd> to decrease or increase emulator speed, respectively - speed can be any integer from 0x to 8x
+
+## Testing
+
+- `make test-timings` runs the instruction timing unit tests
+- `make test-mealybug` runs the [Mealybug Tearoom Tests](https://github.com/mattcurrie/mealybug-tearoom-tests)
+
+  ```sh
+  make test-mealybug                 # all DMG tests
+  python3 test/mealybug.py -f scx    # just the tests matching "scx"
+  ```

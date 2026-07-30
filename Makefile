@@ -66,9 +66,12 @@ $(OUTDIR)$(EXE): $(OBJS) | $(OUTDIR)
 $(OBJDIR)%$(OBJEXT): $(SRCDIR)%$(SRCEXT) | $(OBJDIR)
 	$(CC) $(INCS) $(CFLAGS) -c $< -o $@
 
+# Everything but the SDL front end, for harnesses that supply their own main
+TEST_OBJS := $(filter-out $(OBJDIR)main$(OBJEXT) $(OBJDIR)emu$(OBJEXT) $(OBJDIR)ui$(OBJEXT), $(OBJS))
+
 # Remove built files
 clean:
-	@$(RM) -f $(OBJS) $(OUTDIR)$(EXE)
+	@$(RM) -f $(OBJS) $(OUTDIR)$(EXE) $(OUTDIR)mealybug
 
 # Create directories
 $(OUTDIR) $(OBJDIR):
@@ -83,4 +86,13 @@ test-timings: $(TESTDIR)$(UNITY) $(TESTDIR)$(T_TIME)
 	$(CC) $(CFLAGS) $()src/cpu.c src/debug.c src/dma.c src/mem.c src/stack.c src/instruction.c src/instruction_table.c src/timer.c test/unity.c test/timings.c -o $(OUTDIR)test_timings
 	$(OUTDIR)test_timings
 
-.PHONY: all clean run test-timings
+# Mealybug Tearoom Tests: ppu register writes during mode 3, scored by
+# comparing the screen at the LD B,B breakpoint against reference screenshots.
+$(OUTDIR)mealybug: $(TEST_OBJS) $(TESTDIR)mealybug.c | $(OUTDIR)
+	$(CC) $(INCS) $(CFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS)
+
+test-mealybug: $(OUTDIR)mealybug
+	@sh $(TESTDIR)fetch_mealybug.sh
+	@python3 $(TESTDIR)mealybug.py
+
+.PHONY: all clean run test-timings test-mealybug
