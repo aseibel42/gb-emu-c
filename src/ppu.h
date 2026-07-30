@@ -40,3 +40,4 @@ void ppu_init(bool);
 void ppu_tick();
 
 extern u8* cgb_palette;
+extern u16 dmg_palette[4];

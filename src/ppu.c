@@ -24,8 +24,7 @@ static sprite_info line_sprites[10];
 static u8 win_y = 0;
 static bool win_test_y = false;
 
-// static u32 dmg_palette[4] = {0xFFFFFFFF, 0xFFAAAAAA, 0xFF555555, 0xFF000000};
-static u16 dmg_palette[4] = {0xFFFF, 0xDAD6, 0xA94A, 0x8000};
+u16 dmg_palette[4] = {0xFFFF, 0xDAD6, 0xA94A, 0x8000};
 u8* cgb_palette = {0};
 
 static inline void blend(u8* dest, u8 value, u8 mask) {
