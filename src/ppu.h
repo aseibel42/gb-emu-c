@@ -36,7 +36,7 @@ typedef union {
     };
 } bgw_attr;
 
-void ppu_init(bool);
+void ppu_init();
 void ppu_tick();
 
 extern u8* cgb_palette;

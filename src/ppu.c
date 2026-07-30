@@ -36,7 +36,7 @@ static inline void reverse_bits(u8* x) {
     *x = ((*x * 0x0802LU & 0x22110LU) | (*x * 0x8020LU & 0x88440LU)) * 0x10101LU >> 16;
 }
 
-void ppu_init(bool cgb) {
+void ppu_init() {
     ppu_frame = 0;
     ppu_dots = 0;
 
@@ -46,13 +46,11 @@ void ppu_init(bool cgb) {
     line_sprite_count = 0;
     memset(line_sprites, 0xFF, sizeof(line_sprites));
 
-    // CGB palette (must be initialized, even on DMG)
-    if (cgb) {
-        if (!cgb_palette) {
-            cgb_palette = malloc(128);
-        }
-        memset(cgb_palette, 0xFF, 128);
+    // CGB palette (must also be initialized on DMG to avoid segfault)
+    if (!cgb_palette) {
+        cgb_palette = malloc(128);
     }
+    memset(cgb_palette, 0xFF, 128);
 }
 
 void sort_net_10(u16 a[]) {

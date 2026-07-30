@@ -78,7 +78,7 @@ void cart_run(char* filename) {
 
     cpu_init(cgb);
     io_init();
-    ppu_init(cgb);
+    ppu_init();
     apu_init();
     mem_init(cgb);
 
