@@ -6,8 +6,6 @@
 #include "mem.h"
 
 Cart cart = {0};
-char stem[256];
-char save[256];
 
 // RAM size lookup table
 static const size_t ram_size_table[] = {
@@ -124,6 +122,8 @@ void mbc5_reg(u16 addr, u8 value) {
 static void cart_unload(void) {
     free(cart.rom);
     free(cart.ram);
+    free(cart.name);
+    free(cart.save_path);
     cart = (Cart){0};
     bus.rom_0 = NULL;
     bus.rom_1 = NULL;
@@ -133,9 +133,20 @@ static void cart_unload(void) {
 void cart_load(char *filename) {
     cart_unload();
 
-    get_stem(filename);
-    cart.name = stem;
-    sprintf(save, "save/%s.bin", cart.name);
+    cart.name = get_stem(filename);
+    if (!cart.name) {
+        return;
+    }
+
+    // "save/" + name + ".bin" + '\0'
+    size_t save_path_len = strlen("save/") + strlen(cart.name) + strlen(".bin") + 1;
+    cart.save_path = malloc(save_path_len);
+    if (!cart.save_path) {
+        perror("Failed to allocate memory for save path\n");
+        cart_unload();
+        return;
+    }
+    snprintf(cart.save_path, save_path_len, "save/%s.bin", cart.name);
     printf("Loading ROM: %s\n", cart.name);
 
     // read file
@@ -253,9 +264,9 @@ void cart_load(char *filename) {
     fclose(file);
 }
 
-void get_stem(char* path) {
+char *get_stem(const char *path) {
     // Find the last occurrence of "/"
-    char *dir_pos = strrchr(path, '/');
+    const char *dir_pos = strrchr(path, '/');
 
     // Filename begins after the slash
     const char *filename = dir_pos ? dir_pos + 1 : path;
@@ -266,31 +277,34 @@ void get_stem(char* path) {
     // Calculate the length of the stem
     size_t stem_length = ext_pos ? (size_t)(ext_pos - filename) : strlen(filename);
 
-    // Copy the stem to the output buffer safely
-    if (stem_length >= 255) {
-        fprintf(stderr, "Buffer too small for stem\n");
-        return;
+    char *stem = malloc(stem_length + 1);
+    if (!stem) {
+        perror("Failed to allocate memory for stem\n");
+        return NULL;
     }
 
-    strncpy(stem, filename, stem_length);
+    memcpy(stem, filename, stem_length);
     stem[stem_length] = '\0'; // Null-terminate the string
+    return stem;
 }
 
 void cart_battery_load() {
-    FILE *file = fopen(save, "rb");
+    FILE *file = fopen(cart.save_path, "rb");
 
     if (!file) {
         printf("Failed to open battery save\n");
         return;
     }
 
-    fread(cart.ram, SRAM_BANK_SIZE, cart.num_ram_banks, file);
+    if (fread(cart.ram, SRAM_BANK_SIZE, cart.num_ram_banks, file) != (size_t)cart.num_ram_banks) {
+        perror("Failed to read battery save\n");
+    }
     fclose(file);
 }
 
 void cart_battery_save() {
 
-    FILE *file = fopen(save, "wb");
+    FILE *file = fopen(cart.save_path, "wb");
 
     if (!file) {
         printf("Failed to open battery save\n");
