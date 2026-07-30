@@ -485,7 +485,7 @@ void emu_run() {
         &sdlWindow,
         &sdlRenderer
     )) {
-        fprintf(stdout, "SDL failed to create window and renderer! SDL_Error: %s\n", SDL_GetError());
+        fprintf(stderr, "SDL failed to create window and renderer! SDL_Error: %s\n", SDL_GetError());
         return;
     }
 

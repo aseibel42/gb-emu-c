@@ -71,7 +71,7 @@ void apu_init() {
 
     // Initialize SDL for audio, return error if it fails
     if (!SDL_Init(SDL_INIT_AUDIO)) {
-        printf("SDL_Init failed: %s\n", SDL_GetError());
+        fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
     }
 
     // Init counter state
@@ -89,7 +89,7 @@ void apu_init() {
     // Open an audio stream bound to the default playback device, return error if it fails
     audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &desired, NULL, NULL);
     if (!audio_stream) {
-        printf("SDL_OpenAudioDeviceStream failed: %s\n", SDL_GetError());
+        fprintf(stderr, "SDL_OpenAudioDeviceStream failed: %s\n", SDL_GetError());
         SDL_Quit();
     }
 
@@ -132,11 +132,13 @@ SquareChannel init_square_channel(u8 ch_num) {
 
     // Check for allocation failure
     if (!ch.source_sample_buffer || !ch.target_sample_buffer) {
-        printf("Error: Failed to allocate memory for buffers\n");
+        perror("Failed to allocate memory for buffers");
     }
 
     // Initialize target buffer
-    memset(ch.target_sample_buffer, -1, sizeof(AudioBuffer));
+    if (ch.target_sample_buffer) {
+        memset(ch.target_sample_buffer, -1, sizeof(AudioBuffer));
+    }
 
     // Channel-specific references
     switch (ch_num) {
@@ -182,11 +184,13 @@ WaveChannel init_wave_channel() {
 
     // Check for allocation failure
     if (!ch.source_sample_buffer || !ch.target_sample_buffer) {
-        printf("Error: Failed to allocate memory for buffers\n");
+        perror("Failed to allocate memory for buffers");
     }
 
     // Initialize target buffer
-    memset(ch.target_sample_buffer, -1, sizeof(AudioBuffer));
+    if (ch.target_sample_buffer) {
+        memset(ch.target_sample_buffer, -1, sizeof(AudioBuffer));
+    }
 
     return ch;  // Return the initialized struct
 }
@@ -214,11 +218,13 @@ NoiseChannel init_noise_channel() {
 
     // Check for allocation failure
     if (!ch.source_sample_buffer || !ch.target_sample_buffer) {
-        printf("Error: Failed to allocate memory for buffers\n");
+        perror("Failed to allocate memory for buffers");
     }
 
     // Initialize target buffer
-    memset(ch.target_sample_buffer, -1, sizeof(AudioBuffer));
+    if (ch.target_sample_buffer) {
+        memset(ch.target_sample_buffer, -1, sizeof(AudioBuffer));
+    }
 
     return ch;  // Return the initialized struct
 }
@@ -610,7 +616,7 @@ void ch3_generate_source_audio_samples() {
 u8 ch3_get_wave_nibble(u8 index) {
     // Ensure the index is within the valid range of 0 to 31
     if (index > 31) {
-        printf("Error: invalid wave index");
+        fprintf(stderr, "Error: invalid wave index\n");
         return 0;
     }
 

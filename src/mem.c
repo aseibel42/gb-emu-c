@@ -46,7 +46,7 @@ void mem_init(bool cgb) {
     // CGB - 16kb
     vram = calloc(cgb ? 2 : 1, VRAM_BANK_SIZE);
     if (!vram) {
-        perror("Failed to allocate memory for VRAM\n");
+        perror("Failed to allocate memory for VRAM");
         mem_destroy();
         return;
     }
@@ -56,7 +56,7 @@ void mem_init(bool cgb) {
     // CGB - 32kb
     wram = calloc(cgb ? 8 : 2, WRAM_BANK_SIZE);
     if (!wram) {
-        perror("Failed to allocate memory for WRAM\n");
+        perror("Failed to allocate memory for WRAM");
         mem_destroy();
         return;
     }
@@ -355,7 +355,7 @@ void vram_dma_start(u8 length) {
         cutoff_addr = 0xA000;
         src_ptr = bus.vram + src_addr - 0x8000;
         src_ptr_2 = bus.sram;
-        printf("DMA start_addr in VRAM, should not happen");
+        fprintf(stderr, "DMA start_addr in VRAM, should not happen\n");
     } else if (src_addr < 0xC000) { // SRAM
         cutoff_addr = 0xC000;
         src_ptr = bus.sram + src_addr - 0xA000;

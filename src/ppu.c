@@ -106,7 +106,7 @@ void ppu_oam_scan() {
 void ppu_draw_line_cgb() {
 
     if (io.lcd_y >= Y_RESOLUTION) {
-        printf("SCANLINE Y = %d (THIS SHOULD NEVER HAPPEN!)\n", io.lcd_y);
+        fprintf(stderr, "SCANLINE Y = %d (THIS SHOULD NEVER HAPPEN!)\n", io.lcd_y);
         return;
     }
 
@@ -403,7 +403,7 @@ void ppu_draw_line_cgb() {
 void ppu_draw_line() {
 
     if (io.lcd_y >= Y_RESOLUTION) {
-        printf("SCANLINE Y = %d (THIS SHOULD NEVER HAPPEN!)\n", io.lcd_y);
+        fprintf(stderr, "SCANLINE Y = %d (THIS SHOULD NEVER HAPPEN!)\n", io.lcd_y);
         return;
     }
 

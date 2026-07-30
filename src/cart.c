@@ -142,7 +142,7 @@ void cart_load(char *filename) {
     size_t save_path_len = strlen("save/") + strlen(cart.name) + strlen(".bin") + 1;
     cart.save_path = malloc(save_path_len);
     if (!cart.save_path) {
-        perror("Failed to allocate memory for save path\n");
+        perror("Failed to allocate memory for save path");
         cart_unload();
         return;
     }
@@ -152,13 +152,13 @@ void cart_load(char *filename) {
     // read file
     FILE *file = fopen(filename, "rb");
     if (!file) {
-        perror("Failed to open ROM file\n");
+        perror("Failed to open ROM file");
         return;
     }
 
     // seek to ROM header at 0x100
     if (fseek(file, 0x100, SEEK_SET)) {
-        perror("Failed to seek to ROM header\n");
+        perror("Failed to seek to ROM header");
         fclose(file);
         return;
     }
@@ -166,7 +166,7 @@ void cart_load(char *filename) {
     // read ROM header
     rom_header header;
     if (fread(&header, sizeof(rom_header), 1, file) != 1) {
-        perror("Failed to read ROM header\n");
+        perror("Failed to read ROM header");
         fclose(file);
         return;
     }
@@ -186,7 +186,7 @@ void cart_load(char *filename) {
     cart.num_rom_banks = 2 << header.rom_size;
     cart.rom = malloc(cart.num_rom_banks * ROM_BANK_SIZE);
     if (!cart.rom) {
-        perror("Failed to allocate memory for ROM\n");
+        perror("Failed to allocate memory for ROM");
         fclose(file);
         return;
     }
@@ -195,7 +195,7 @@ void cart_load(char *filename) {
     // read ROM
     rewind(file);
     if (fread(cart.rom, ROM_BANK_SIZE, cart.num_rom_banks, file) != cart.num_rom_banks) {
-        perror("Failed to read ROM data\n");
+        perror("Failed to read ROM data");
         cart_unload();
         fclose(file);
         return;
@@ -214,7 +214,7 @@ void cart_load(char *filename) {
     if (cart.num_ram_banks > 0) {
         cart.ram = malloc(cart.num_ram_banks * SRAM_BANK_SIZE);
         if (!cart.ram) {
-            perror("Failed to allocate memory for RAM\n");
+            perror("Failed to allocate memory for RAM");
             cart_unload();
             fclose(file);
             return;
@@ -279,7 +279,7 @@ char *get_stem(const char *path) {
 
     char *stem = malloc(stem_length + 1);
     if (!stem) {
-        perror("Failed to allocate memory for stem\n");
+        perror("Failed to allocate memory for stem");
         return NULL;
     }
 
@@ -292,12 +292,12 @@ void cart_battery_load() {
     FILE *file = fopen(cart.save_path, "rb");
 
     if (!file) {
-        printf("Failed to open battery save\n");
+        perror("Failed to open battery save");
         return;
     }
 
     if (fread(cart.ram, SRAM_BANK_SIZE, cart.num_ram_banks, file) != (size_t)cart.num_ram_banks) {
-        perror("Failed to read battery save\n");
+        perror("Failed to read battery save");
     }
     fclose(file);
 }
@@ -307,7 +307,7 @@ void cart_battery_save() {
     FILE *file = fopen(cart.save_path, "wb");
 
     if (!file) {
-        printf("Failed to open battery save\n");
+        perror("Failed to open battery save");
         return;
     }
 
