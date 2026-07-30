@@ -61,6 +61,10 @@ void* cpu_process(void* ptr) {
 
 void cart_run(char* filename) {
     cart_load(filename);
+    if (!cart.rom) {
+        fprintf(stderr, "FAILED TO LOAD ROM: %s\n", filename);
+        return;
+    }
 
     // initialize timers
     // current_time = SDL_GetPerformanceCounter();
@@ -80,6 +84,9 @@ void cart_run(char* filename) {
 
     cart_battery_load();
 
+    // The UI must exist before the CPU thread is allowed to run a scanline
+    ui_init();
+
     // Initialize mutexes and condition variables
     pthread_mutex_init(&cpu_lock, NULL);
     pthread_cond_init(&cpu_cond, NULL);
@@ -87,19 +94,12 @@ void cart_run(char* filename) {
     pthread_cond_init(&ui_cond, NULL);
 
     // Run CPU in separate threads
+    frames_queued = 0;
     pthread_t cpu_thread;
     if (pthread_create(&cpu_thread, NULL, cpu_process, NULL)) {
         fprintf(stderr, "FAILED TO START CPU THREAD!\n");
         return;
     }
-
-    ui_init();
-
-    // Signal that UI has initialized
-    frames_queued = 0;
-    pthread_mutex_lock(&ui_lock);
-    pthread_cond_signal(&ui_cond);
-    pthread_mutex_unlock(&ui_lock);
 
     while(!quit) {
 

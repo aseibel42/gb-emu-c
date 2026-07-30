@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "cart.h"
 #include "io.h"
@@ -27,41 +28,55 @@ extern SquareChannel ch2;
 extern WaveChannel ch3;
 extern NoiseChannel ch4;
 
+void mem_destroy() {
+    free(vram);
+    free(wram);
+    vram = NULL;
+    wram = NULL;
+    bus.vram = NULL;
+    bus.wram_0 = NULL;
+    bus.wram_1 = NULL;
+}
+
 void mem_init(bool cgb) {
+    mem_destroy();
+
     // Video RAM
-    // DMG - 16kb
-    // CGB - 32kb
-    vram = malloc(VRAM_BANK_SIZE * (cgb ? 2 : 1));
+    // DMG - 8kb
+    // CGB - 16kb
+    vram = calloc(cgb ? 2 : 1, VRAM_BANK_SIZE);
     if (!vram) {
         perror("Failed to allocate memory for VRAM\n");
-        goto cleanup_vram;
+        mem_destroy();
+        return;
     }
 
     // Work RAM
     // DMG - 8kb
     // CGB - 32kb
-    wram = malloc(WRAM_BANK_SIZE * (cgb ? 8 : 2));
+    wram = calloc(cgb ? 8 : 2, WRAM_BANK_SIZE);
     if (!wram) {
         perror("Failed to allocate memory for WRAM\n");
-        goto cleanup_wram;
+        mem_destroy();
+        return;
     }
+
+    memset(oam, 0, sizeof(oam));
+
+    // init dma transfer state
+    dma_active = false;
+    dma_delay = 0;
+    dma_offset = 0;
+    dma_source_addr = 0;
+    hdma_active = false;
+    hdma_dest_ptr = NULL;
+    hdma_src_ptr = NULL;
 
     bus.page_0 = (u8*)&io;
     bus.oam = oam;
     bus.vram = vram;
     bus.wram_0 = wram;
     bus.wram_1 = wram + WRAM_BANK_SIZE;
-    return;
-
-cleanup_wram:
-    free(wram);
-    wram = NULL;
-    bus.wram_0 = NULL;
-    bus.wram_1 = NULL;
-cleanup_vram:
-    free(vram);
-    vram = NULL;
-    bus.vram = NULL;
 }
 
 u8 mem_read(u16 addr) {

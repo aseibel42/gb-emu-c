@@ -41,8 +41,17 @@ void ppu_init(bool cgb) {
     ppu_frame = 0;
     ppu_dots = 0;
 
+    // Window and sprite state
+    win_y = 0;
+    win_test_y = false;
+    line_sprite_count = 0;
+    memset(line_sprites, 0xFF, sizeof(line_sprites));
+
+    // CGB palette (must be initialized, even on DMG)
     if (cgb) {
-        cgb_palette = malloc(128);
+        if (!cgb_palette) {
+            cgb_palette = malloc(128);
+        }
         memset(cgb_palette, 0xFF, 128);
     }
 }

@@ -67,6 +67,10 @@ void limit_fps() {
 }
 
 void ui_init() {
+    // Discard the previous game's surface and texture
+    SDL_DestroySurface(sdlSurface);
+    SDL_DestroyTexture(sdlTexture);
+
     // A surface is located in RAM and can be efficiently updated on CPU
     sdlSurface = SDL_CreateSurface(
         X_RESOLUTION,

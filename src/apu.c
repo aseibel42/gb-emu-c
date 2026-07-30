@@ -41,11 +41,44 @@ const u8 wave_duty_table[4] = {
     0b01111110   // 75% duty cycle
 };
 
+// Release everything allocated in apu_init().
+// Safe to call before the first init.
+void apu_destroy() {
+    if (audio_stream) {
+        SDL_DestroyAudioStream(audio_stream);
+        audio_stream = NULL;
+    }
+
+    free(ch1.source_sample_buffer);
+    free(ch1.target_sample_buffer);
+    free(ch2.source_sample_buffer);
+    free(ch2.target_sample_buffer);
+    free(ch3.source_sample_buffer);
+    free(ch3.target_sample_buffer);
+    free(ch4.source_sample_buffer);
+    free(ch4.target_sample_buffer);
+    ch1 = (SquareChannel){0};
+    ch2 = (SquareChannel){0};
+    ch3 = (WaveChannel){0};
+    ch4 = (NoiseChannel){0};
+
+    free(combined_target_buffer);
+    combined_target_buffer = NULL;
+}
+
 void apu_init() {
+    apu_destroy();
+
     // Initialize SDL for audio, return error if it fails
     if (!SDL_Init(SDL_INIT_AUDIO)) {
         printf("SDL_Init failed: %s\n", SDL_GetError());
     }
+
+    // Init counter state
+    frame_sequence_counter = 0;
+    sample_tick_counter = 0;
+    apu_speed_counter = 0;
+    source_buffer_count = 0;
 
     // Save audio device settings
     SDL_zero(desired);

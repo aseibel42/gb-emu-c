@@ -120,7 +120,19 @@ void mbc5_reg(u16 addr, u8 value) {
     }
 }
 
+// Release the previous game's cartridge memory.
+static void cart_unload(void) {
+    free(cart.rom);
+    free(cart.ram);
+    cart = (Cart){0};
+    bus.rom_0 = NULL;
+    bus.rom_1 = NULL;
+    bus.sram = NULL;
+}
+
 void cart_load(char *filename) {
+    cart_unload();
+
     get_stem(filename);
     cart.name = stem;
     sprintf(save, "save/%s.bin", cart.name);
@@ -136,21 +148,24 @@ void cart_load(char *filename) {
     // seek to ROM header at 0x100
     if (fseek(file, 0x100, SEEK_SET)) {
         perror("Failed to seek to ROM header\n");
-        goto close;
+        fclose(file);
+        return;
     }
 
     // read ROM header
     rom_header header;
     if (fread(&header, sizeof(rom_header), 1, file) != 1) {
         perror("Failed to read ROM header\n");
-        goto close;
+        fclose(file);
+        return;
     }
     printf("Title: %.*s\n", 16, header.title);
 
     // validate ROM size
     if (header.rom_size > 8) {
         fprintf(stderr, "Unsupported ROM size code: 0x%02X\n", header.rom_size);
-        goto close;
+        fclose(file);
+        return;
     }
 
     // Print cart type
@@ -161,7 +176,8 @@ void cart_load(char *filename) {
     cart.rom = malloc(cart.num_rom_banks * ROM_BANK_SIZE);
     if (!cart.rom) {
         perror("Failed to allocate memory for ROM\n");
-        goto close;
+        fclose(file);
+        return;
     }
     printf("ROM: %d bytes\n", cart.num_rom_banks * ROM_BANK_SIZE);
 
@@ -169,13 +185,17 @@ void cart_load(char *filename) {
     rewind(file);
     if (fread(cart.rom, ROM_BANK_SIZE, cart.num_rom_banks, file) != cart.num_rom_banks) {
         perror("Failed to read ROM data\n");
-        goto cleanup_rom;
+        cart_unload();
+        fclose(file);
+        return;
     }
 
     // validate RAM size
     if (header.ram_size == 1 || header.ram_size > 5) {
         fprintf(stderr, "Unsupported RAM size code: 0x%02X\n", header.ram_size);
-        goto cleanup_rom;
+        cart_unload();
+        fclose(file);
+        return;
     }
 
     // allocate memory for RAM
@@ -184,7 +204,9 @@ void cart_load(char *filename) {
         cart.ram = malloc(cart.num_ram_banks * SRAM_BANK_SIZE);
         if (!cart.ram) {
             perror("Failed to allocate memory for RAM\n");
-            goto cleanup_ram;
+            cart_unload();
+            fclose(file);
+            return;
         }
         printf("RAM: %d bytes\n", cart.num_ram_banks * SRAM_BANK_SIZE);
     }
@@ -228,19 +250,6 @@ void cart_load(char *filename) {
         cart.write_ram = mbc_write_ram;
     }
 
-    // everything has succeeded - return to skip cleanup
-    return;
-
-// NOTE: use of labels and goto statements is generally discouraged, but it
-// _is_ useful for resource management like closing files and freeing memory
-// when the process can fail at multiple different stages.
-cleanup_ram:
-    free(cart.ram);
-    cart.ram = NULL;
-cleanup_rom:
-    free(cart.rom);
-    cart.rom = NULL;
-close:
     fclose(file);
 }
 
