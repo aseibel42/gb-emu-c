@@ -157,6 +157,16 @@ void mem_write(u16 addr, u8 value) {
     } else if (addr < 0xFF00) {
         // Prohibited
     } else {
+        // Registers the ppu samples while it draws. A write to one of these
+        // part way through a scanline only applies to the pixels the ppu has
+        // not output yet, so let it finish the ones it has.
+        switch (addr) {
+            case 0xFF40: case 0xFF42: case 0xFF43: case 0xFF47:
+            case 0xFF48: case 0xFF49: case 0xFF4A: case 0xFF4B:
+                ppu_sync_line();
+                break;
+        }
+
         if (addr == 0xFF00) {
             // Lower nibble of gamepad is read-only
             io.joyp.value = (value & 0xF0) | (io.joyp.value & 0xF);

@@ -24,6 +24,13 @@ static sprite_info line_sprites[10];
 static u8 win_y = 0;
 static bool win_test_y = false;
 
+// The scanline being drawn, and how many of its pixels have already been
+// committed to the surface. A game can change an LCD register in the middle of
+// mode 3, which only affects the pixels the ppu has not reached yet, so the
+// line is committed in segments split at those writes (see ppu_sync_line).
+static u16 line_buffer[X_RESOLUTION];
+static u8 line_committed = 0;
+
 // static u32 dmg_palette[4] = {0xFFFFFFFF, 0xFFAAAAAA, 0xFF555555, 0xFF000000};
 static u16 dmg_palette[4] = {0xFFFF, 0xDAD6, 0xA94A, 0x8000};
 u8* cgb_palette = {0};
@@ -44,6 +51,7 @@ void ppu_init(bool cgb) {
     // Window and sprite state
     win_y = 0;
     win_test_y = false;
+    line_committed = 0;
     line_sprite_count = 0;
     memset(line_sprites, 0xFF, sizeof(line_sprites));
 
@@ -369,8 +377,7 @@ void ppu_draw_line_cgb() {
         }
     }
 
-    // Get pixel colors and write to surface
-    u16* scanline_ptr = ui_scanline_start(io.lcd_y);
+    // Get pixel colors and write to the line buffer
     for (int t = 0; t<TILES_PER_LINE; t++) {
         u8 color_lsb = color_0[t];
         u8 color_msb = color_1[t];
@@ -393,7 +400,7 @@ void ppu_draw_line_cgb() {
             palette_id |= (source_b1 >> bit) & 1; palette_id <<= 1;
             palette_id |= (source_b0 >> bit) & 1;
 
-            void* dest_ptr = scanline_ptr + 8*t + (7 - bit);
+            void* dest_ptr = line_buffer + 8*t + (7 - bit);
             void* src_ptr = cgb_palette + 8*palette_id + 2*color_id;
             memcpy(dest_ptr, src_ptr, sizeof(u16));
         }
@@ -571,7 +578,6 @@ void ppu_draw_line() {
     }
 
     // Get pixel color from info
-    u16 pixel_colors[160];
     for (int t = 0; t<TILES_PER_LINE; t++) {
         u8 color_lsb = color_0[t];
         u8 color_msb = color_1[t];
@@ -592,13 +598,37 @@ void ppu_draw_line() {
 
             u8 palette = palette_id ? io.obj_palette[palette_id-1] : io.bg_palette;
             u8 color_index = (palette >> (2*color_id)) & 0b11;
-            pixel_colors[8*t+7-bit] = dmg_palette[color_index];
+            line_buffer[8*t+7-bit] = dmg_palette[color_index];
         }
     }
+}
 
-    // Copy pixels to surface
-    u16* scanline_ptr = ui_scanline_start(io.lcd_y);
-    memcpy(scanline_ptr, pixel_colors, 2*160);
+// Draw the current scanline with the registers as they stand right now, and
+// copy the pixels between the last split point and x to the surface.
+static void ppu_commit_line(u8 x) {
+    if (io.lcd_y >= Y_RESOLUTION || x <= line_committed) return;
+
+    is_cgb() ? ppu_draw_line_cgb() : ppu_draw_line();
+    memcpy(ui_scanline_start(io.lcd_y) + line_committed,
+           line_buffer + line_committed,
+           sizeof(u16) * (x - line_committed));
+    line_committed = x;
+}
+
+// Called before a write to an LCD register lands. During mode 3 the pixels to
+// the left of the ppu's current position have already been shifted out and keep
+// the old register value, so commit them before the new one takes effect.
+// pocket.gb relies on this: it flips the tile data area (LCDC bit 4) partway
+// through every line so the background and the window can use different tile
+// sets.
+void ppu_sync_line() {
+    if (!io.lcdc.lcd_enable || io.stat.ppu_mode != PPU_MODE_XFER) return;
+
+    // Pixels lag the dot counter by the fetcher's head start, and a tile whose
+    // fetch is already underway is drawn with the old value either way, so the
+    // change lands on the next 8-pixel boundary.
+    u32 x = ((ppu_dots - 80) & ~7u) + 8;
+    ppu_commit_line(x > X_RESOLUTION ? X_RESOLUTION : (u8)x);
 }
 
 // Enter a new ppu mode, raising a STAT interrupt if the game selected that mode
@@ -643,12 +673,14 @@ void ppu_end_frame() {
 void ppu_mode_oam() {
     if (ppu_dots >= 80) {
         ppu_set_mode(PPU_MODE_XFER);
-        is_cgb() ? ppu_draw_line_cgb() : ppu_draw_line();
+        line_committed = 0;
     }
 }
 
 void ppu_mode_xfer() {
     if (ppu_dots >= 80 + 172) { // TODO: add extra dots from "penalties"
+        // Whatever is left of the line after the last mid-line register write
+        ppu_commit_line(X_RESOLUTION);
         ppu_set_mode(PPU_MODE_HBLANK);
         hdma_tick();
     }

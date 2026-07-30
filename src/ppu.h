@@ -38,5 +38,6 @@ typedef union {
 
 void ppu_init(bool);
 void ppu_tick();
+void ppu_sync_line();
 
 extern u8* cgb_palette;
